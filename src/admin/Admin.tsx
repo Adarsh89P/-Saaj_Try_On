@@ -242,6 +242,20 @@ function SettingsPane() {
             <label htmlFor="model">Model</label>
             <input id="model" className="input" value={settings.geminiModel} onChange={(e) => void updateSettings({ geminiModel: e.target.value.trim() })} />
           </div>
+          <label className="hstack" style={{ gap: 10, cursor: 'pointer' }}>
+            <input
+              type="checkbox" checked={settings.cleanGarmentPhotos}
+              onChange={(e) => void updateSettings({ cleanGarmentPhotos: e.target.checked })}
+              style={{ width: 22, height: 22, accentColor: 'var(--color-accent-500)' }}
+            />
+            <span style={{ fontSize: 14 }}>Remove the background from new catalogue photos</span>
+          </label>
+          <p className="tiny muted" style={{ margin: '-4px 0 0', paddingLeft: 32 }}>
+            Cuts the piece out of the shop background as it is added, which makes every try-on of it
+            better. One extra billed request per photo, and you can keep the original if the cutout is
+            wrong.
+          </p>
+
           <p className="notice">
             The key is stored on this tablet only and is sent straight to Google with each try-on. Anyone who
             can reach this Staff area can read it, so use a key restricted to this shop&rsquo;s billing and rotate

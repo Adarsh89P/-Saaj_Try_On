@@ -112,9 +112,83 @@ async function runDemo(req: TryOnRequest, onProgress: ProgressFn, seconds: numbe
  * Google — no server of ours ever sees the customer's photo.
  * ------------------------------------------------------------------- */
 
+/** One image-editing round trip to Google. Shared by the try-on and by the
+ *  catalogue's background removal — same endpoint, same key, same error shape. */
+async function geminiEdit(
+  prompt: string,
+  images: Blob[],
+  settings: Settings,
+  whatFailed: string,
+): Promise<Blob> {
+  if (!settings.geminiKey) throw new Error('No Gemini API key set. Add one in Staff → Settings, or switch to the demo engine.');
+
+  const encoded = await Promise.all(images.map(blobToBase64));
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiModel)}:generateContent`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.geminiKey },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            ...encoded.map((data, i) => ({
+              inline_data: { mime_type: images[i].type || 'image/jpeg', data },
+            })),
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    let message = `${whatFailed} service returned ${res.status}.`;
+    try {
+      const parsed = JSON.parse(detail);
+      if (parsed?.error?.message) message = parsed.error.message;
+    } catch { /* keep the status-code message */ }
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  const parts: Array<{ inlineData?: { data: string; mimeType?: string }; inline_data?: { data: string; mime_type?: string } }> =
+    data?.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
+  const payload = imagePart?.inlineData
+    ?? (imagePart?.inline_data ? { data: imagePart.inline_data.data, mimeType: imagePart.inline_data.mime_type } : undefined);
+  if (!payload?.data) throw new Error(`The ${whatFailed.toLowerCase()} service did not return an image.`);
+
+  return base64ToBlob(payload.data, payload.mimeType || 'image/png');
+}
+
+/* ── background removal ─────────────────────────────────────────────────
+ * A garment shot on the shop floor carries shelves, hands and other stock into
+ * the frame, and the try-on model then has to guess which part of the picture
+ * is the piece being sold. Cleaning the photo once, when it is added to the
+ * catalogue, pays for itself on every try-on afterwards.
+ * ------------------------------------------------------------------- */
+
+export function canCleanPhotos(settings: Settings) {
+  return settings.provider === 'gemini' && Boolean(settings.geminiKey);
+}
+
+export async function removeBackground(photo: Blob, label: string, settings: Settings): Promise<Blob> {
+  const prompt =
+    `Remove the background from this photograph of a garment (${label}). ` +
+    `Cut out everything that is not the garment itself — people, faces, hands, hangers, shelves, ` +
+    `other clothes, packaging and floor — and place the garment on a plain, evenly lit off-white background. ` +
+    `Keep the garment exactly as it is: do not change its colour, print, motifs, border, texture, drape or shape, ` +
+    `and do not crop any part of it. Show the whole garment, centred, filling most of the frame. ` +
+    `Return only the edited photograph.`;
+
+  return geminiEdit(prompt, [photo], settings, 'Photo cleanup');
+}
+
 async function runGemini(req: TryOnRequest, onProgress: ProgressFn, settings: Settings): Promise<TryOnResult> {
-  if (!settings.geminiKey) throw new Error('No Gemini API key set. Add one in Admin → Settings, or switch to the demo engine.');
-  if (!req.garment) throw new Error(`"${req.product.name}" has no photo yet. Add one in Admin → Catalogue.`);
+  if (!req.garment) throw new Error(`"${req.product.name}" has no photo yet. Add one in Staff → Catalogue.`);
 
   let pct = 0;
   const timer = setInterval(() => {
@@ -123,7 +197,6 @@ async function runGemini(req: TryOnRequest, onProgress: ProgressFn, settings: Se
   }, 220);
 
   try {
-    const [personB64, garmentB64] = await Promise.all([blobToBase64(req.person), blobToBase64(req.garment)]);
     const prompt =
       `Replace the clothing worn by the person in the first image with the garment shown in the second image ` +
       `(a ${req.product.cat.toLowerCase().replace(/s$/, '')} in ${req.product.color.toLowerCase()}, "${req.product.name}"). ` +
@@ -131,43 +204,9 @@ async function runGemini(req: TryOnRequest, onProgress: ProgressFn, settings: Se
       `Match the garment's colour, print and fabric faithfully, and drape it naturally with realistic folds, ` +
       `shadows and lighting consistent with the original photo. Return only the edited photograph.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiModel)}:generateContent`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.geminiKey },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: req.person.type || 'image/jpeg', data: personB64 } },
-              { inline_data: { mime_type: req.garment.type || 'image/jpeg', data: garmentB64 } },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      let message = `Try-on service returned ${res.status}.`;
-      try {
-        const parsed = JSON.parse(detail);
-        if (parsed?.error?.message) message = parsed.error.message;
-      } catch { /* keep the status-code message */ }
-      throw new Error(message);
-    }
-
-    const data = await res.json();
-    const parts: Array<{ inlineData?: { data: string; mimeType?: string }; inline_data?: { data: string; mime_type?: string } }> =
-      data?.candidates?.[0]?.content?.parts ?? [];
-    const imagePart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
-    const payload = imagePart?.inlineData ?? (imagePart?.inline_data ? { data: imagePart.inline_data.data, mimeType: imagePart.inline_data.mime_type } : undefined);
-    if (!payload?.data) throw new Error('The try-on service did not return an image. Try a clearer full-body photo.');
-
+    const image = await geminiEdit(prompt, [req.person, req.garment], settings, 'Try-on');
     onProgress(100, 'Ready');
-    return { image: base64ToBlob(payload.data, payload.mimeType || 'image/png'), simulated: false };
+    return { image, simulated: false };
   } finally {
     clearInterval(timer);
   }

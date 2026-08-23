@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { Media } from '../components/Img';
 import { saveImage, deleteImage } from '../lib/db';
 import { shrink } from '../lib/image';
+import { canCleanPhotos, removeBackground } from '../lib/tryon';
 import { CATEGORIES, type Product } from '../lib/types';
 
 const blank = (): Product => ({
@@ -11,10 +12,15 @@ const blank = (): Product => ({
 });
 
 export function ProductForm({ initial, onClose }: { initial?: Product; onClose: () => void }) {
-  const { saveProduct, deleteProduct } = useStore();
+  const { saveProduct, deleteProduct, settings } = useStore();
   const [draft, setDraft] = useState<Product>(() => initial ?? blank());
   const [sizes, setSizes] = useState(() => (initial ?? blank()).sizes.join(', '));
   const [busy, setBusy] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  /** The untouched upload, kept while the cleaned version is on screen so the
+   *  shop can reject a bad cutout. Whichever is not chosen gets deleted. */
+  const [originalKey, setOriginalKey] = useState<string>();
+  const [cleanNote, setCleanNote] = useState<string>();
   const [error, setError] = useState<string>();
   const fileRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -30,15 +36,52 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
     if (!file) return;
     setBusy(true);
     setError(undefined);
+    setCleanNote(undefined);
+
+    let rawKey: string;
     try {
-      const key = await saveImage(await shrink(file, 1400), 'product');
+      rawKey = await saveImage(await shrink(file, 1400), 'product');
       if (draft.imageKey) await deleteImage(draft.imageKey);
-      setDraft((d) => ({ ...d, imageKey: key }));
+      if (originalKey) await deleteImage(originalKey);
+      setOriginalKey(undefined);
+      setDraft((d) => ({ ...d, imageKey: rawKey }));
     } catch {
       setError('That file could not be read as an image.');
-    } finally {
       setBusy(false);
+      return;
     }
+    setBusy(false);
+
+    // The cutout is a second, billed request, so it only runs when the shop has
+    // switched it on and a key is set. A failure here is never fatal: the photo
+    // is already saved, and the shop simply keeps the one it took.
+    if (!settings.cleanGarmentPhotos || !canCleanPhotos(settings)) return;
+
+    setCleaning(true);
+    try {
+      const raw = await shrink(file, 1400);
+      const label = `${draft.color || 'unknown colour'} ${draft.cat.toLowerCase().replace(/s$/, '')}`.trim();
+      const cleanedKey = await saveImage(await shrink(await removeBackground(raw, label, settings), 1400), 'product');
+      setOriginalKey(rawKey);
+      setDraft((d) => ({ ...d, imageKey: cleanedKey }));
+      setCleanNote('Background removed. Check it looks right — the original is one tap away.');
+    } catch (err) {
+      setCleanNote(
+        `Could not clean this photo up, so the original is being used. ${err instanceof Error ? err.message : ''}`.trim(),
+      );
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  /** Puts the untouched upload back and throws the cutout away. */
+  const keepOriginal = async () => {
+    if (!originalKey) return;
+    const cleaned = draft.imageKey;
+    setDraft((d) => ({ ...d, imageKey: originalKey }));
+    setOriginalKey(undefined);
+    setCleanNote(undefined);
+    if (cleaned && cleaned !== originalKey) await deleteImage(cleaned);
   };
 
   const submit = async () => {
@@ -54,6 +97,8 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
       stock: Math.max(0, Math.round(draft.stock)),
       sizes: parsedSizes,
     });
+    // Whichever version was not chosen is dead weight now.
+    if (originalKey && originalKey !== draft.imageKey) await deleteImage(originalKey);
     setBusy(false);
     onClose();
   };
@@ -81,11 +126,27 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
             <Media imageKey={draft.imageKey} label="No photo" className="media media--3x4 media--r22" />
           </div>
           <div className="stack" style={{ flex: 1 }}>
-            <button type="button" className="btn btn--outline btn--sm" onClick={() => fileRef.current?.click()} disabled={busy}>
-              {draft.imageKey ? 'Replace photo' : 'Add photo'}
+            <button type="button" className="btn btn--outline btn--sm" onClick={() => fileRef.current?.click()} disabled={busy || cleaning}>
+              {cleaning ? 'Removing background…' : draft.imageKey ? 'Replace photo' : 'Add photo'}
             </button>
+
+            {cleaning && (
+              <p className="tiny muted" style={{ margin: 0 }}>
+                Cutting the piece out of the shop background. This takes a few seconds.
+              </p>
+            )}
+
+            {cleanNote && !cleaning && <p className="tiny muted" style={{ margin: 0 }}>{cleanNote}</p>}
+
+            {originalKey && !cleaning && (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => void keepOriginal()}>
+                Use the original photo instead
+              </button>
+            )}
+
             <p className="tiny muted" style={{ margin: 0 }}>
-              A clear, front-on photo of the garment on a plain background gives the best try-on.
+              A clear, front-on photo of the garment gives the best try-on. Shoot the whole piece opened
+              out, with no hands or faces in the frame.
             </p>
             <input
               ref={fileRef}

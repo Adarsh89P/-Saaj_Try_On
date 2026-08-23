@@ -40,6 +40,8 @@ export interface Settings {
   provider: TryOnProviderId;
   geminiKey: string;
   geminiModel: string;
+  /** Runs new catalogue photos through background removal as they are added. */
+  cleanGarmentPhotos: boolean;
   /** Demo provider only: how long the fake render takes, in seconds. */
   demoSeconds: number;
   privacyNotice: boolean;
@@ -51,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   provider: 'demo',
   geminiKey: '',
   geminiModel: 'gemini-2.5-flash-image',
+  cleanGarmentPhotos: true,
   demoSeconds: 2.6,
   privacyNotice: true,
   adminPin: '2468',
