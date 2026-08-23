@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as db from './lib/db';
+import { clearImageCache } from './components/Img';
 import { runTryOn } from './lib/tryon';
-import { makeCode, SEED_PRODUCTS } from './lib/seed';
+import { ensureCatalogue, makeCode } from './lib/seed';
 import { DEFAULT_SETTINGS, type Order, type Product, type SavedItem, type Settings } from './lib/types';
 
 export type Screen =
@@ -25,13 +26,16 @@ interface Session {
   resultSimulated: boolean;
   pendingTryOn: boolean;
   code: string;
+  /** Set once the photo has been deleted on request, so the pickup screen can
+   *  say so instead of offering to delete it again. */
+  photoDeleted: boolean;
   error?: string;
 }
 
 const freshSession = (): Session => ({
   screen: 'home', prev: 'home', cat: 'All', query: '', saved: [],
   progress: 0, step: '', compare: 'after', resultSimulated: false,
-  pendingTryOn: false, code: makeCode(),
+  pendingTryOn: false, code: makeCode(), photoDeleted: false,
 });
 
 interface Store {
@@ -55,6 +59,8 @@ interface Store {
   saveCurrent: () => void;
   removeSaved: (key: string) => void;
   checkout: () => Promise<void>;
+  deletePhoto: () => Promise<void>;
+  resetSelection: () => void;
   finish: () => Promise<void>;
   product: Product | undefined;
   saveProduct: (p: Product) => Promise<void>;
@@ -65,6 +71,17 @@ interface Store {
 }
 
 const Ctx = createContext<Store | null>(null);
+
+/** Deletes every stored image except the shop's own product photos — so the
+ *  customer's photo and every try-on made from it go, and the catalogue stays.
+ *  Revoking the object URLs matters as much as the delete: without it the photo
+ *  is gone from IndexedDB but still held in memory and renderable. */
+async function wipeCustomerImages(products: Product[]) {
+  const keep = new Set<string>();
+  for (const p of products) if (p.imageKey) keep.add(p.imageKey);
+  await db.pruneImages(keep);
+  clearImageCache();
+}
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -81,14 +98,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const [stored, loadedSettings, loadedOrders] = await Promise.all([
         db.loadProducts(), db.loadSettings(), db.loadOrders(),
       ]);
-      if (stored?.length) setProducts(stored);
-      else {
-        setProducts(SEED_PRODUCTS);
-        await db.saveProducts(SEED_PRODUCTS);
-      }
+      const seeded = await ensureCatalogue(stored);
+      const catalogue = seeded ?? stored ?? [];
+      setProducts(catalogue);
+      if (seeded) await db.saveProducts(seeded);
+
       setSettings(loadedSettings);
       setOrders(loadedOrders);
       setReady(true);
+
+      // A session that ended in a crash, a reload or a flat battery never ran
+      // its own wipe, so its photos are still here. Nothing is on screen yet,
+      // so startup is the safe moment to clear whatever was left behind.
+      await wipeCustomerImages(catalogue);
     })();
   }, []);
 
@@ -114,7 +136,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const key = await db.saveImage(blob, 'person');
     setS((prev) => {
       void db.deleteImage(prev.draftKey);
-      return { ...prev, draftKey: key, screen: 'preview', prev: 'photo', error: undefined };
+      return { ...prev, draftKey: key, screen: 'preview', prev: 'photo', photoDeleted: false, error: undefined };
     });
   }, []);
 
@@ -224,13 +246,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     go('staff');
   }, [s.code, s.saved, orders, go]);
 
+  /** Deletes the photo and every try-on made from it, but keeps the pickup code
+   *  and the saved list — those are names and sizes only. Offered at the pickup
+   *  screen so the customer decides, rather than the tablet deciding for her. */
+  const deletePhoto = useCallback(async () => {
+    runId.current++;
+    await wipeCustomerImages(products);
+    setS((prev) => ({
+      ...prev,
+      personKey: undefined,
+      draftKey: undefined,
+      resultKey: undefined,
+      photoDeleted: true,
+      saved: prev.saved.map((r) => ({ ...r, resultKey: undefined })),
+    }));
+  }, [products]);
+
+  /** Clears the selection and the code but keeps the photo, so the same
+   *  customer can start choosing again without standing for another photo. */
+  const resetSelection = useCallback(() => {
+    setS((prev) => ({
+      ...prev,
+      saved: [],
+      code: makeCode(),
+      screen: 'collection',
+      prev: 'home',
+      productId: undefined,
+      resultKey: undefined,
+      error: undefined,
+    }));
+  }, []);
+
   /** Wipes the customer's photo and try-ons, then hands the tablet to the next person. */
   const finish = useCallback(async () => {
     runId.current++;
-    const keep = new Set<string>();
-    for (const p of products) if (p.imageKey) keep.add(p.imageKey);
     setS(freshSession());
-    await db.pruneImages(keep);
+    await wipeCustomerImages(products);
   }, [products]);
 
   const saveProduct = useCallback(async (p: Product) => {
@@ -274,7 +325,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSize: (size) => patch({ size }),
     setCompare: (compare) => patch({ compare }),
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
-    startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, finish,
+    startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
     saveProduct, deleteProduct, updateSettings, markCollected, clearOrders,
   };
 

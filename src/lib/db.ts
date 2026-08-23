@@ -61,6 +61,23 @@ export async function saveOrders(orders: Order[]) {
   await set(ORDERS, orders, store);
 }
 
+/* ── one-shot flags ─────────────────────────────────────────────────── */
+
+const FLAGS = 'flags';
+
+/** Records that a one-time migration has run, so it never runs twice and
+ *  cannot undo a change the shop made afterwards. */
+export async function getFlag(name: string): Promise<boolean> {
+  const flags = await get<Record<string, boolean>>(FLAGS, store);
+  return Boolean(flags?.[name]);
+}
+
+export async function setFlag(name: string) {
+  const flags = (await get<Record<string, boolean>>(FLAGS, store)) ?? {};
+  flags[name] = true;
+  await set(FLAGS, flags, store);
+}
+
 /* ── settings ───────────────────────────────────────────────────────── */
 
 export async function loadSettings(): Promise<Settings> {

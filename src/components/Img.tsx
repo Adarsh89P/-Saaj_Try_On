@@ -3,6 +3,14 @@ import { getImage } from '../lib/db';
 
 const cache = new Map<string, string>();
 
+/** Drops every cached object URL. Deleting a blob from IndexedDB is not enough
+ *  on its own — a live object URL keeps the photo in memory and renderable, so
+ *  this must run whenever the customer's images are wiped. */
+export function clearImageCache() {
+  for (const url of cache.values()) URL.revokeObjectURL(url);
+  cache.clear();
+}
+
 /** Renders an image held in IndexedDB. Object URLs are cached per key so a
  *  thumbnail re-appearing in a list does not re-read the blob every time. */
 export function Img({ imageKey, alt, className }: { imageKey?: string; alt: string; className?: string }) {

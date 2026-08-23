@@ -38,4 +38,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- The kiosk captures the customer photo with getUserMedia inside the
+         WebView. Capacitor's WebChromeClient only grants that request if the
+         app itself holds CAMERA, so it must be declared here. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- A tablet with no camera still works: the photo screen falls back to
+         picking a file, so do not let this keep the app off such devices. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 </manifest>

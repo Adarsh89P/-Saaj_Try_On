@@ -3,7 +3,7 @@ import { Img } from '../components/Img';
 import { money } from '../lib/image';
 
 export function Selection() {
-  const { s, go, removeSaved, checkout } = useStore();
+  const { s, products, go, removeSaved, checkout } = useStore();
   const total = s.saved.reduce((a, r) => a + r.price, 0);
   const countText = s.saved.length === 1 ? '1 piece' : `${s.saved.length} pieces`;
 
@@ -27,23 +27,29 @@ export function Selection() {
       <h1 className="h-lg">My selection</h1>
 
       <div className="stack" style={{ gap: 12 }}>
-        {s.saved.map((row) => (
-          <div key={row.key} className="row">
-            <div className="row__thumb">
-              <Img imageKey={row.resultKey ?? row.imageKey} alt={row.name} />
+        {s.saved.map((row) => {
+          // Stock is read from the catalogue, not the snapshot taken when the
+          // piece was saved, so a staff edit shows up here straight away.
+          const live = products.find((p) => p.id === row.productId);
+          const stock = live?.stock ?? row.stock;
+          return (
+            <div key={row.key} className="row">
+              <div className="row__thumb">
+                <Img imageKey={row.resultKey ?? row.imageKey} alt={row.name} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.name}</p>
+                <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>Size {row.size} · {money(row.price)}</p>
+                <p style={{ margin: '3px 0 0', fontSize: 12.5, fontWeight: 600, color: stock > 0 ? 'var(--color-accent-2-800)' : 'var(--color-accent-700)' }}>
+                  {stock <= 0 ? 'Out of stock' : stock > 2 ? 'In stock' : `Only ${stock} left`}
+                </p>
+              </div>
+              <button type="button" className="btn btn--ghost" style={{ color: 'var(--color-neutral-700)' }} onClick={() => removeSaved(row.key)}>
+                Remove
+              </button>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.name}</p>
-              <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>Size {row.size} · {money(row.price)}</p>
-              <p style={{ margin: '3px 0 0', fontSize: 12.5, fontWeight: 600, color: 'var(--color-accent-2-800)' }}>
-                {row.stock > 2 ? 'In stock' : `Only ${row.stock} left`}
-              </p>
-            </div>
-            <button type="button" className="btn btn--ghost" style={{ color: 'var(--color-neutral-700)' }} onClick={() => removeSaved(row.key)}>
-              Remove
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="between" style={{ alignItems: 'baseline', padding: '0 4px' }}>
@@ -60,7 +66,7 @@ export function Selection() {
 }
 
 export function Staff() {
-  const { s, finish } = useStore();
+  const { s, finish, deletePhoto, resetSelection, go } = useStore();
   const total = s.saved.reduce((a, r) => a + r.price, 0);
   const countText = s.saved.length === 1 ? '1 piece' : `${s.saved.length} pieces`;
 
@@ -92,10 +98,40 @@ export function Staff() {
         ))}
       </div>
 
-      <p className="tiny muted center" style={{ margin: 0 }}>
-        Your photo and try-ons are wiped when you tap Finish.
-      </p>
-      <button type="button" className="btn btn--outline btn--block" onClick={() => void finish()}>Finish and clear</button>
+      {/* The customer decides what happens to her photo — the tablet does not
+          decide for her. Keeping it lets her carry on trying pieces on with the
+          same photo; deleting it takes it off the tablet there and then. */}
+      <div className="stack" style={{ gap: 10 }}>
+        {s.photoDeleted ? (
+          <p className="notice center" style={{ margin: 0 }}>
+            Your photo and try-ons have been deleted from this tablet. Your code above still works.
+          </p>
+        ) : (
+          <>
+            <p className="tiny muted center" style={{ margin: 0 }}>
+              Your photo is still on this tablet so you can try more pieces on. Delete it whenever you like.
+            </p>
+            <div className="hstack" style={{ gap: 10 }}>
+              <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => void deletePhoto()}>
+                Delete my photo
+              </button>
+              <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={() => go('collection')}>
+                Try more pieces
+              </button>
+            </div>
+          </>
+        )}
+
+        <button type="button" className="btn btn--ghost btn--block" onClick={resetSelection}>
+          Start a new selection — keep my photo
+        </button>
+        <button type="button" className="btn btn--outline btn--block" onClick={() => void finish()}>
+          Finish — next customer
+        </button>
+        <p className="tiny muted center" style={{ margin: 0 }}>
+          Finishing deletes the photo and clears the tablet for the next person.
+        </p>
+      </div>
     </div>
   );
 }
