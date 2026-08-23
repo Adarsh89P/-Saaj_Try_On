@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">saaj-tryon</string>
+    <string name="title_activity_main">saaj-tryon</string>
+    <string name="package_name">com.saaj.tryon</string>
+    <string name="custom_url_scheme">com.saaj.tryon</string>
+</resources>
