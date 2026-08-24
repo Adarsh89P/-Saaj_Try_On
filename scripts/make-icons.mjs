@@ -98,6 +98,9 @@ const files = [
   ['icon-512.png', 512, 0.04],
   // maskable icons get cropped to a circle by Android, so keep more margin
   ['maskable-512.png', 512, 0.13],
+  // iOS rounds the corners of the home-screen icon itself and ignores any
+  // transparency, so this one is opaque with a little margin for the rounding.
+  ['apple-touch-icon-180.png', 180, 0.06],
 ];
 
 for (const [name, size, inset] of files) {
