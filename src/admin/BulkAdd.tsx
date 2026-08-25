@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Img } from '../components/Img';
-import { deleteImage, saveImage } from '../lib/db';
-import { shrink } from '../lib/image';
+import { deleteImage, getImage, saveImage } from '../lib/db';
+import { makeThumb, shrink } from '../lib/image';
 import { canCleanPhotos, describeGarment, LimitReached, removeBackground } from '../lib/tryon';
 import { CATEGORIES, type Product } from '../lib/types';
 
@@ -104,18 +104,28 @@ export function BulkAdd({ onClose }: { onClose: () => void }) {
     if (!ready.length) { setError('Give at least one piece a name before saving.'); return; }
     setSaving(true);
 
-    const products: Product[] = ready.map((r) => ({
-      id: r.id,
-      name: r.name.trim(),
-      cat: r.cat,
-      price: Math.max(0, Math.round(r.price)),
-      color: r.color.trim() || 'Assorted',
-      sizes: r.sizes.split(',').map((z) => z.trim()).filter(Boolean).length
-        ? r.sizes.split(',').map((z) => z.trim()).filter(Boolean)
-        : ['Free size'],
-      stock: Math.max(0, Math.round(r.stock)),
-      imageKey: r.imageKey,
-      createdAt: Date.now(),
+    const products: Product[] = await Promise.all(ready.map(async (r) => {
+      const parsed = r.sizes.split(',').map((z) => z.trim()).filter(Boolean);
+      // One thumbnail per piece now, so the collection grid never decodes a
+      // full-size photo to paint a tile.
+      let thumbKey: string | undefined;
+      try {
+        const full = await getImage(r.imageKey);
+        if (full) thumbKey = await saveImage(await makeThumb(full), 'product');
+      } catch { /* the piece still works, its tile is just costlier to paint */ }
+
+      return {
+        id: r.id,
+        name: r.name.trim(),
+        cat: r.cat,
+        price: Math.max(0, Math.round(r.price)),
+        color: r.color.trim() || 'Assorted',
+        sizes: parsed.length ? parsed : ['Free size'],
+        stock: Math.max(0, Math.round(r.stock)),
+        imageKey: r.imageKey,
+        thumbKey,
+        createdAt: Date.now(),
+      };
     }));
 
     await addProducts(products);

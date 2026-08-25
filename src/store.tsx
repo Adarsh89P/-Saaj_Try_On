@@ -3,6 +3,7 @@ import * as db from './lib/db';
 import { clearImageCache } from './components/Img';
 import { runTryOn } from './lib/tryon';
 import { ensureCatalogue, makeCode } from './lib/seed';
+import { makeThumb } from './lib/image';
 import { DEFAULT_SETTINGS, type Order, type Product, type SavedItem, type Settings } from './lib/types';
 
 export type Screen =
@@ -79,7 +80,12 @@ const Ctx = createContext<Store | null>(null);
  *  is gone from IndexedDB but still held in memory and renderable. */
 async function wipeCustomerImages(products: Product[]) {
   const keep = new Set<string>();
-  for (const p of products) if (p.imageKey) keep.add(p.imageKey);
+  for (const p of products) {
+    if (p.imageKey) keep.add(p.imageKey);
+    // Thumbnails are shop property too — miss this and every grid picture is
+    // pruned the first time a customer finishes.
+    if (p.thumbKey) keep.add(p.thumbKey);
+  }
   await db.pruneImages(keep);
   clearImageCache();
 }
@@ -112,6 +118,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // its own wipe, so its photos are still here. Nothing is on screen yet,
       // so startup is the safe moment to clear whatever was left behind.
       await wipeCustomerImages(catalogue);
+
+      // Pieces photographed before thumbnails existed get one now. This runs
+      // after the kiosk is already usable, one at a time, so a big catalogue
+      // does not stall the first screen.
+      const needThumbs = catalogue.filter((p) => p.imageKey && !p.thumbKey);
+      if (needThumbs.length) {
+        const made = new Map<string, string>();
+        for (const p of needThumbs) {
+          try {
+            const full = await db.getImage(p.imageKey!);
+            if (full) made.set(p.id, await db.saveImage(await makeThumb(full), 'product'));
+          } catch { /* a piece without a thumb still shows, just less cheaply */ }
+        }
+        if (made.size) {
+          const withThumbs = catalogue.map((p) => (made.has(p.id) ? { ...p, thumbKey: made.get(p.id) } : p));
+          setProducts(withThumbs);
+          await db.saveProducts(withThumbs);
+        }
+      }
     })();
   }, []);
 
@@ -222,7 +247,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (prev.saved.some((r) => r.key === key)) return { ...prev, screen: 'selection', prev: prev.screen };
       const item: SavedItem = {
         key, productId: p.id, name: p.name, size, price: p.price,
-        stock: p.stock, imageKey: p.imageKey,
+        stock: p.stock, imageKey: p.imageKey, thumbKey: p.thumbKey,
         resultKey: prev.screen === 'result' ? prev.resultKey : undefined,
       };
       return { ...prev, saved: [...prev.saved, item], screen: 'selection', prev: prev.screen };
@@ -307,6 +332,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setProducts(next);
     await db.saveProducts(next);
     await db.deleteImage(target?.imageKey);
+    await db.deleteImage(target?.thumbKey);
     setS((prev) => (prev.productId === id ? { ...prev, productId: undefined } : prev));
   }, [products]);
 
@@ -327,16 +353,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await db.saveOrders([]);
   }, []);
 
-  const value: Store = {
+  const setCat = useCallback((cat: string) => patch({ cat }), [patch]);
+  const setQuery = useCallback((query: string) => patch({ query }), [patch]);
+  const setSize = useCallback((size: string) => patch({ size }), [patch]);
+  const setCompare = useCallback((compare: 'before' | 'after') => patch({ compare }), [patch]);
+
+  // Rebuilding this object on every render handed every consumer a new context
+  // value each time, so a single keystroke in the search box re-rendered the
+  // whole tree. Now only real state changes propagate.
+  const value: Store = useMemo(() => ({
     ready, products, settings, orders, s, go, back, product,
-    setCat: (cat) => patch({ cat }),
-    setQuery: (query) => patch({ query }),
-    setSize: (size) => patch({ size }),
-    setCompare: (compare) => patch({ compare }),
+    setCat, setQuery, setSize, setCompare,
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
     saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,
-  };
+  }), [
+    ready, products, settings, orders, s, go, back, product,
+    setCat, setQuery, setSize, setCompare,
+    openProduct, setDraftPhoto, confirmPhoto, discardDraft,
+    startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
+    saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,
+  ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -31,7 +31,9 @@ export function Img({ imageKey, alt, className }: { imageKey?: string; alt: stri
   }, [imageKey]);
 
   if (!url) return null;
-  return <img src={url} alt={alt} className={className} />;
+  // Decoding off the main thread keeps a grid of tiles from janking as it
+  // paints; the boxes already reserve their space in CSS, so nothing shifts.
+  return <img src={url} alt={alt} className={className} decoding="async" loading="lazy" />;
 }
 
 /** A media box that falls back to the product name when there is no photo yet. */

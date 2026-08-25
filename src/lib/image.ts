@@ -42,6 +42,14 @@ export function loadBitmap(blob: Blob): Promise<HTMLImageElement> {
   });
 }
 
+export const THUMB_PX = 420;
+
+/** The copy that grids and lists paint. Small enough that a screen of tiles is
+ *  a handful of cheap decodes rather than a dozen full-size ones. */
+export async function makeThumb(blob: Blob): Promise<Blob> {
+  return shrink(blob, THUMB_PX, 0.8);
+}
+
 /** Downscales to `max` on the long edge and re-encodes as JPEG. Keeps the
  *  IndexedDB store small and the AI upload fast on shop wifi. */
 export async function shrink(file: Blob, max = 1280, quality = 0.86): Promise<Blob> {

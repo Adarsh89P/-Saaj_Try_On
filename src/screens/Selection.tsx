@@ -37,7 +37,7 @@ export function Selection() {
           return (
             <div key={row.key} className="row">
               <div className="row__thumb">
-                <Img imageKey={row.resultKey ?? row.imageKey} alt={row.name} />
+                <Img imageKey={row.resultKey ?? row.thumbKey ?? row.imageKey} alt={row.name} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.name}</p>

@@ -99,7 +99,7 @@ export function Result() {
               style={{ flex: 'none', width: 96 }}
               onClick={() => void startTryOn(p.id)}
             >
-              <Media imageKey={p.imageKey} label={p.name} className="media media--3x4 media--r22" />
+              <Media imageKey={p.thumbKey ?? p.imageKey} label={p.name} className="media media--3x4 media--r22" />
               <span className="tile__name" style={{ fontSize: 12.5 }}>{p.name}</span>
               <span className="tile__meta" style={{ fontSize: 12 }}>{money(p.price)}</span>
             </button>

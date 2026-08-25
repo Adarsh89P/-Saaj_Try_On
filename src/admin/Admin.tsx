@@ -106,7 +106,7 @@ function Catalogue() {
               <tr key={p.id}>
                 <td>
                   {p.imageKey
-                    ? <Img imageKey={p.imageKey} alt="" className="admin-thumb" />
+                    ? <Img imageKey={p.thumbKey ?? p.imageKey} alt="" className="admin-thumb" />
                     : <span className="admin-thumb" aria-label="No photo" />}
                 </td>
                 <td>

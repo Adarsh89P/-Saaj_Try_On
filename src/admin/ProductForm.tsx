@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Media } from '../components/Img';
-import { saveImage, deleteImage } from '../lib/db';
-import { shrink } from '../lib/image';
+import { saveImage, deleteImage, getImage } from '../lib/db';
+import { makeThumb, shrink } from '../lib/image';
 import { canCleanPhotos, removeBackground } from '../lib/tryon';
 import { CATEGORIES, type Product } from '../lib/types';
 
@@ -89,8 +89,21 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
     if (!draft.name.trim()) { setError('Give the piece a name.'); return; }
     if (parsedSizes.length === 0) { setError('List at least one size.'); return; }
     setBusy(true);
+
+    // The grid paints a thumbnail, not the full photo. Made here, once, rather
+    // than decoding the original for every tile on every screen.
+    let thumbKey = draft.thumbKey;
+    if (draft.imageKey && draft.imageKey !== initial?.imageKey) {
+      const full = await getImage(draft.imageKey);
+      if (full) {
+        if (thumbKey) await deleteImage(thumbKey);
+        thumbKey = await saveImage(await makeThumb(full), 'product');
+      }
+    }
+
     await saveProduct({
       ...draft,
+      thumbKey,
       name: draft.name.trim(),
       color: draft.color.trim() || 'Assorted',
       price: Math.max(0, Math.round(draft.price)),

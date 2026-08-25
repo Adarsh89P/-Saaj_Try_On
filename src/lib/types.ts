@@ -8,8 +8,12 @@ export interface Product {
   color: string;
   sizes: string[];
   stock: number;
-  /** Key into the image blob store (see lib/db.ts). Absent until a photo is added. */
+  /** Key into the image blob store (see lib/db.ts). Absent until a photo is added.
+   *  Full size: this is what gets sent for a try-on. */
   imageKey?: string;
+  /** Small copy of the same photo for grids and lists. Painting a 62px thumb
+   *  from a 1400px original costs a full decode per tile. */
+  thumbKey?: string;
   createdAt: number;
 }
 
@@ -21,6 +25,7 @@ export interface SavedItem {
   price: number;
   stock: number;
   imageKey?: string;
+  thumbKey?: string;
   /** Blob key of the generated try-on, when one exists. */
   resultKey?: string;
 }

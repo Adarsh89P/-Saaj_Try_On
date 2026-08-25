@@ -72,7 +72,7 @@ export function Home() {
       <div className="grid2">
         {featured.map((p) => (
           <button key={p.id} type="button" className="tile" onClick={() => openProduct(p.id)}>
-            <Media imageKey={p.imageKey} label={p.name} className="media media--3x4 media--r22" />
+            <Media imageKey={p.thumbKey ?? p.imageKey} label={p.name} className="media media--3x4 media--r22" />
             <span className="tile__name">{p.name}</span>
             <span className="tile__meta">{money(p.price)} · {p.sizes.join(' · ')}</span>
           </button>
