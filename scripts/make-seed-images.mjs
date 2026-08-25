@@ -38,11 +38,55 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc]);
 }
 
+/** PNG's five per-row filters. Deflate compresses differences from a neighbour
+ *  far better than raw values, which matters a lot on the gradients here. */
+const paeth = (a, b, c) => {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+};
+
+/** Filters one scanline five ways and keeps whichever has the least total
+ *  deviation — the standard heuristic for guessing what will deflate best. */
+function filterRow(line, prev, bpp, out) {
+  let best = null;
+  let bestScore = Infinity;
+
+  for (let type = 0; type <= 4; type++) {
+    const candidate = Buffer.alloc(line.length);
+    let score = 0;
+    for (let i = 0; i < line.length; i++) {
+      const a = i >= bpp ? line[i - bpp] : 0;
+      const b = prev[i];
+      const c = i >= bpp ? prev[i - bpp] : 0;
+      let v;
+      switch (type) {
+        case 1: v = line[i] - a; break;
+        case 2: v = line[i] - b; break;
+        case 3: v = line[i] - ((a + b) >> 1); break;
+        case 4: v = line[i] - paeth(a, b, c); break;
+        default: v = line[i];
+      }
+      candidate[i] = v & 0xff;
+      // Signed magnitude: bytes near zero in either direction compress well.
+      score += candidate[i] < 128 ? candidate[i] : 256 - candidate[i];
+    }
+    if (score < bestScore) { bestScore = score; best = { type, candidate }; }
+  }
+
+  out.push(Buffer.from([best.type]), best.candidate);
+}
+
 function png(width, height, draw) {
-  const stride = width * 3 + 1;
-  const raw = Buffer.alloc(stride * height);
+  const bpp = 3;
+  const lineBytes = width * bpp;
+  const chunks = [];
+  let prev = Buffer.alloc(lineBytes);
+
   for (let y = 0; y < height; y++) {
-    raw[y * stride] = 0; // filter: none
+    const line = Buffer.alloc(lineBytes);
     for (let x = 0; x < width; x++) {
       // Average SS×SS samples per pixel so edges read smooth at tile size.
       let r = 0, g = 0, b = 0;
@@ -53,12 +97,16 @@ function png(width, height, draw) {
         }
       }
       const n = SS * SS;
-      const o = y * stride + 1 + x * 3;
-      raw[o] = Math.round(r / n);
-      raw[o + 1] = Math.round(g / n);
-      raw[o + 2] = Math.round(b / n);
+      const o = x * bpp;
+      line[o] = Math.round(r / n);
+      line[o + 1] = Math.round(g / n);
+      line[o + 2] = Math.round(b / n);
     }
+    filterRow(line, prev, bpp, chunks);
+    prev = line;
   }
+
+  const raw = Buffer.concat(chunks);
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
