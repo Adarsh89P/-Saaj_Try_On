@@ -6,7 +6,8 @@ import { PROVIDERS } from '../lib/tryon';
 import { ProductForm } from './ProductForm';
 import { BulkAdd } from './BulkAdd';
 import { loadUsage, type Usage } from '../lib/db';
-import type { Product } from '../lib/types';
+import { LANGUAGES } from '../lib/i18n';
+import type { Lang, Product } from '../lib/types';
 
 type Tab = 'catalogue' | 'pickups' | 'settings';
 
@@ -209,6 +210,19 @@ function SettingsPane() {
       <div className="field">
         <label htmlFor="shop">Shop name</label>
         <input id="shop" className="input" value={settings.shopName} onChange={(e) => void updateSettings({ shopName: e.target.value })} />
+      </div>
+
+      <div className="field">
+        <label htmlFor="lang">Customer language</label>
+        <select
+          id="lang" className="select" value={settings.language}
+          onChange={(e) => void updateSettings({ language: e.target.value as Lang })}
+        >
+          {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+        </select>
+        <p className="tiny muted" style={{ margin: '4px 0 0', paddingLeft: 6 }}>
+          Changes the screens the customer sees. This Staff area always stays in English.
+        </p>
       </div>
 
       <div className="field">

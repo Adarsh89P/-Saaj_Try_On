@@ -17,7 +17,8 @@ export interface TryOnResult {
   simulated: boolean;
 }
 
-const STEPS = ['Reading your photo', 'Matching your shape', 'Fitting the garment', 'Smoothing the drape'];
+// Translation keys, not text: the customer screen looks these up in her language.
+const STEPS = ['step.reading', 'step.shape', 'step.fitting', 'step.drape'];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -101,7 +102,7 @@ async function runDemo(req: TryOnRequest, onProgress: ProgressFn, seconds: numbe
   ctx.textBaseline = 'middle';
   ctx.fillText(label, W / 2, boxY + boxH / 2);
 
-  onProgress(100, 'Ready');
+  onProgress(100, 'step.ready');
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
   if (!blob) throw new Error('Could not save the preview.');
   return { image: blob, simulated: true };
@@ -269,7 +270,7 @@ async function runGemini(req: TryOnRequest, onProgress: ProgressFn, settings: Se
       `shadows and lighting consistent with the original photo. Return only the edited photograph.`;
 
     const image = await geminiEdit(prompt, [req.person, req.garment], settings, 'Try-on');
-    onProgress(100, 'Ready');
+    onProgress(100, 'step.ready');
     return { image, simulated: false };
   } finally {
     clearInterval(timer);

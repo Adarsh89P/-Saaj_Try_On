@@ -1,22 +1,24 @@
 import { useStore } from '../store';
 import { Img } from '../components/Img';
 import { money } from '../lib/image';
+import { useT } from '../lib/i18n';
 
 export function Selection() {
   const { s, products, go, removeSaved, checkout } = useStore();
+  const t = useT();
   const total = s.saved.reduce((a, r) => a + r.price, 0);
-  const countText = s.saved.length === 1 ? '1 piece' : `${s.saved.length} pieces`;
+  const countText = s.saved.length === 1 ? t('common.pieceOne') : t('common.pieceMany', { n: s.saved.length });
 
   if (s.saved.length === 0) {
     return (
       <div className="page">
-        <h1 className="h-lg">My selection</h1>
+        <h1 className="h-lg">{t('selection.title')}</h1>
         <div className="stack center" style={{ alignItems: 'center', gap: 16, padding: '44px 16px' }}>
           <div aria-hidden="true" style={{ width: 84, height: 84, borderRadius: 999, background: 'var(--color-accent-2-200)' }} />
           <p className="muted" style={{ margin: 0, fontSize: 15, lineHeight: 1.5, maxWidth: 280 }}>
-            Nothing saved yet. Try a few pieces on and keep the ones you like here.
+            {t('selection.empty')}
           </p>
-          <button type="button" className="btn btn--primary" onClick={() => go('collection')}>Browse the collection</button>
+          <button type="button" className="btn btn--primary" onClick={() => go('collection')}>{t('selection.browse')}</button>
         </div>
       </div>
     );
@@ -24,7 +26,7 @@ export function Selection() {
 
   return (
     <div className="page">
-      <h1 className="h-lg">My selection</h1>
+      <h1 className="h-lg">{t('selection.title')}</h1>
 
       <div className="stack" style={{ gap: 12 }}>
         {s.saved.map((row) => {
@@ -39,13 +41,19 @@ export function Selection() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.name}</p>
-                <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>Size {row.size} · {money(row.price)}</p>
+                <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>
+                  {t('common.size')} {row.size} · {money(row.price)}
+                </p>
                 <p style={{ margin: '3px 0 0', fontSize: 12.5, fontWeight: 600, color: stock > 0 ? 'var(--color-accent-2-800)' : 'var(--color-accent-700)' }}>
-                  {stock <= 0 ? 'Out of stock' : stock > 2 ? 'In stock' : `Only ${stock} left`}
+                  {stock <= 0
+                    ? t('selection.outOfStock')
+                    : stock > 2
+                      ? t('selection.inStock')
+                      : t('selection.lowStock', { n: stock })}
                 </p>
               </div>
               <button type="button" className="btn btn--ghost" style={{ color: 'var(--color-neutral-700)' }} onClick={() => removeSaved(row.key)}>
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           );
@@ -57,9 +65,9 @@ export function Selection() {
         <span style={{ fontFamily: 'var(--font-heading)', fontSize: 22 }}>{money(total)}</span>
       </div>
 
-      <button type="button" className="btn btn--primary btn--block" onClick={() => void checkout()}>Show shop staff</button>
+      <button type="button" className="btn btn--primary btn--block" onClick={() => void checkout()}>{t('selection.checkout')}</button>
       <p className="tiny muted center" style={{ margin: 0, padding: '0 12px' }}>
-        Staff will bring only these pieces to the trial room.
+        {t('selection.checkoutHint')}
       </p>
     </div>
   );
@@ -67,12 +75,13 @@ export function Selection() {
 
 export function Staff() {
   const { s, finish, deletePhoto, resetSelection, go } = useStore();
+  const t = useT();
   const total = s.saved.reduce((a, r) => a + r.price, 0);
-  const countText = s.saved.length === 1 ? '1 piece' : `${s.saved.length} pieces`;
+  const countText = s.saved.length === 1 ? t('common.pieceOne') : t('common.pieceMany', { n: s.saved.length });
 
   return (
     <div className="page">
-      <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 28, lineHeight: 1.14 }}>Show this to any staff member</h1>
+      <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 28, lineHeight: 1.14 }}>{t('code.title')}</h1>
 
       <div
         style={{
@@ -81,7 +90,7 @@ export function Staff() {
         }}
       >
         <p style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', opacity: .85 }}>
-          Pickup code
+          {t('code.label')}
         </p>
         <p style={{ margin: '10px 0 0', fontFamily: 'var(--font-heading)', fontSize: 56, lineHeight: 1.05, letterSpacing: '.06em' }}>
           {s.code}
@@ -93,7 +102,7 @@ export function Staff() {
         {s.saved.map((row) => (
           <div key={row.key} className="between" style={{ padding: '14px 16px', background: 'var(--color-neutral-200)', borderRadius: 18 }}>
             <span style={{ fontSize: 14.5, fontWeight: 600 }}>{row.name}</span>
-            <span className="muted" style={{ fontSize: 13 }}>Size {row.size}</span>
+            <span className="muted" style={{ fontSize: 13 }}>{t('common.size')} {row.size}</span>
           </div>
         ))}
       </div>
@@ -103,34 +112,28 @@ export function Staff() {
           same photo; deleting it takes it off the tablet there and then. */}
       <div className="stack" style={{ gap: 10 }}>
         {s.photoDeleted ? (
-          <p className="notice center" style={{ margin: 0 }}>
-            Your photo and try-ons have been deleted from this tablet. Your code above still works.
-          </p>
+          <p className="notice center" style={{ margin: 0 }}>{t('code.photoDeleted')}</p>
         ) : (
           <>
-            <p className="tiny muted center" style={{ margin: 0 }}>
-              Your photo is still on this tablet so you can try more pieces on. Delete it whenever you like.
-            </p>
+            <p className="tiny muted center" style={{ margin: 0 }}>{t('code.photoHere')}</p>
             <div className="hstack" style={{ gap: 10 }}>
               <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => void deletePhoto()}>
-                Delete my photo
+                {t('code.deletePhoto')}
               </button>
               <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={() => go('collection')}>
-                Try more pieces
+                {t('code.tryMore')}
               </button>
             </div>
           </>
         )}
 
         <button type="button" className="btn btn--ghost btn--block" onClick={resetSelection}>
-          Start a new selection — keep my photo
+          {t('code.newSelection')}
         </button>
         <button type="button" className="btn btn--outline btn--block" onClick={() => void finish()}>
-          Finish — next customer
+          {t('code.finish')}
         </button>
-        <p className="tiny muted center" style={{ margin: 0 }}>
-          Finishing deletes the photo and clears the tablet for the next person.
-        </p>
+        <p className="tiny muted center" style={{ margin: 0 }}>{t('code.finishHint')}</p>
       </div>
     </div>
   );

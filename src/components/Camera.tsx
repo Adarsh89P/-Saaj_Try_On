@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { shrink } from '../lib/image';
+import { useT } from '../lib/i18n';
 
 type Status = 'idle' | 'starting' | 'live' | 'denied' | 'unsupported';
 
@@ -13,6 +14,7 @@ export function Camera({ onCapture }: { onCapture: (blob: Blob) => void | Promis
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
+  const t = useT();
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -38,11 +40,7 @@ export function Camera({ onCapture }: { onCapture: (blob: Blob) => void | Promis
     } catch (err) {
       const name = err instanceof DOMException ? err.name : '';
       setStatus(name === 'NotAllowedError' ? 'denied' : 'unsupported');
-      setMessage(
-        name === 'NotAllowedError'
-          ? 'Camera permission was refused. Allow it in the browser settings, or upload a photo instead.'
-          : 'No camera available on this device. Upload a photo instead.',
-      );
+      setMessage(name === 'NotAllowedError' ? t('cam.denied') : t('cam.unsupported'));
     }
   }, [stop]);
 
@@ -78,7 +76,7 @@ export function Camera({ onCapture }: { onCapture: (blob: Blob) => void | Promis
       stop();
       await onCapture(await shrink(file));
     } catch {
-      setMessage('That file could not be read as an image.');
+      setMessage(t('cam.badFile'));
     } finally {
       setBusy(false);
     }
@@ -94,9 +92,7 @@ export function Camera({ onCapture }: { onCapture: (blob: Blob) => void | Promis
           style={{ display: status === 'live' ? 'block' : 'none', transform: facing === 'user' ? 'scaleX(-1)' : undefined }}
         />
         <div className="cam__guide"><i /></div>
-        <p className="cam__hint">
-          Stand so your whole body fits the outline
-        </p>
+        <p className="cam__hint">{t('cam.guide')}</p>
       </div>
 
       {message && <p className="error">{message}</p>}
@@ -104,24 +100,24 @@ export function Camera({ onCapture }: { onCapture: (blob: Blob) => void | Promis
       {status === 'live' ? (
         <>
           <button type="button" className="btn btn--primary btn--block" onClick={capture} disabled={busy}>
-            {busy ? 'Saving…' : 'Take the photo'}
+            {busy ? t('cam.saving') : t('cam.take')}
           </button>
           <button
             type="button"
             className="btn btn--outline btn--block"
             onClick={() => { const next = facing === 'user' ? 'environment' : 'user'; setFacing(next); void start(next); }}
           >
-            Switch camera
+            {t('cam.switch')}
           </button>
         </>
       ) : (
         <button type="button" className="btn btn--primary btn--block" onClick={() => void start(facing)} disabled={status === 'starting'}>
-          {status === 'starting' ? 'Opening camera…' : 'Open camera'}
+          {status === 'starting' ? t('cam.opening') : t('cam.open')}
         </button>
       )}
 
       <button type="button" className="btn btn--outline btn--block" onClick={() => fileRef.current?.click()} disabled={busy}>
-        Upload from device
+        {t('cam.upload')}
       </button>
       <input
         ref={fileRef}

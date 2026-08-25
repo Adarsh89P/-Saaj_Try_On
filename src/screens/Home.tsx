@@ -1,31 +1,33 @@
 import { useStore } from '../store';
 import { Media, Img } from '../components/Img';
 import { money } from '../lib/image';
+import { useT } from '../lib/i18n';
 import { CATEGORIES } from '../lib/types';
 
 export function Home() {
   const { s, settings, products, go, openProduct, setCat } = useStore();
+  const t = useT();
   const featured = [...products].sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
 
   return (
     <div className="page">
       <div className="between">
         <p className="kicker">{settings.shopName}</p>
-        <a className="btn btn--ghost" href="#/admin">Staff</a>
+        <a className="btn btn--ghost" href="#/admin">{t('common.staff')}</a>
       </div>
 
-      <h1 className="h-xl">See yourself in our collection</h1>
+      <h1 className="h-xl">{t('home.title')}</h1>
 
       {s.personKey ? (
         <div className="row" style={{ background: 'var(--color-accent-2-200)', borderRadius: 28, padding: '16px 18px' }}>
           <div className="row__thumb" style={{ width: 52, height: 64, borderRadius: 14 }}>
-            <Img imageKey={s.personKey} alt="Your photo" />
+            <Img imageKey={s.personKey} alt={t('photo.yourPhoto')} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Your photo is ready</p>
-            <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-accent-2-800)' }}>Pick anything below to try it on</p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{t('home.photoReady')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-accent-2-800)' }}>{t('home.photoReadyHint')}</p>
           </div>
-          <button type="button" className="btn btn--ghost" onClick={() => go('photo')}>Retake</button>
+          <button type="button" className="btn btn--ghost" onClick={() => go('photo')}>{t('home.retake')}</button>
         </div>
       ) : (
         <div
@@ -35,7 +37,7 @@ export function Home() {
           }}
         >
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: '#fff8f1', maxWidth: 320 }}>
-            Take one full-body photo and try on anything in the shop without leaving your seat.
+            {t('home.intro')}
           </p>
           <button
             type="button"
@@ -43,7 +45,7 @@ export function Home() {
             style={{ background: '#fffaf4', color: 'var(--color-accent-800)', boxShadow: 'var(--shadow-sm)', alignSelf: 'flex-start' }}
             onClick={() => go('photo')}
           >
-            Take your photo
+            {t('home.takePhoto')}
           </button>
         </div>
       )}
@@ -57,14 +59,14 @@ export function Home() {
             aria-pressed={s.cat === c}
             onClick={() => { setCat(c); go('collection'); }}
           >
-            {c}
+            {t(`cat.${c}`)}
           </button>
         ))}
       </div>
 
       <div className="between" style={{ alignItems: 'baseline' }}>
-        <h2 className="h-md">New this week</h2>
-        <button type="button" className="btn btn--ghost" onClick={() => go('collection')}>See all</button>
+        <h2 className="h-md">{t('home.newThisWeek')}</h2>
+        <button type="button" className="btn btn--ghost" onClick={() => go('collection')}>{t('home.seeAll')}</button>
       </div>
 
       <div className="grid2">
@@ -77,11 +79,7 @@ export function Home() {
         ))}
       </div>
 
-      {products.length === 0 && (
-        <p className="notice">
-          The catalogue is empty. A staff member can add pieces from the Staff area.
-        </p>
-      )}
+      {products.length === 0 && <p className="notice">{t('home.emptyCatalogue')}</p>}
     </div>
   );
 }

@@ -8,16 +8,14 @@ import { Processing } from './screens/Processing';
 import { Result } from './screens/Result';
 import { Selection, Staff } from './screens/Selection';
 import { Admin } from './admin/Admin';
+import { useT } from './lib/i18n';
 import './styles/app.css';
 
-const NAV = [
-  { key: 'home', label: 'Home' },
-  { key: 'collection', label: 'Collection' },
-  { key: 'selection', label: 'My selection' },
-] as const;
+const NAV = ['home', 'collection', 'selection'] as const;
 
 function Kiosk() {
   const { ready, s, go } = useStore();
+  const t = useT();
 
   if (!ready) {
     return (
@@ -45,14 +43,16 @@ function Kiosk() {
 
       {showNav && (
         <nav className="nav" aria-label="Main">
-          {NAV.map((n) => (
+          {NAV.map((key) => (
             <button
-              key={n.key}
+              key={key}
               type="button"
-              aria-current={s.screen === n.key ? 'page' : undefined}
-              onClick={() => go(n.key)}
+              aria-current={s.screen === key ? 'page' : undefined}
+              onClick={() => go(key)}
             >
-              {n.key === 'selection' && s.saved.length > 0 ? `My selection (${s.saved.length})` : n.label}
+              {key === 'selection' && s.saved.length > 0
+                ? t('nav.selectionCount', { n: s.saved.length })
+                : t(`nav.${key}`)}
             </button>
           ))}
         </nav>

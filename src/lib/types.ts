@@ -35,8 +35,12 @@ export interface Order {
 
 export type TryOnProviderId = 'demo' | 'gemini';
 
+export type Lang = 'en' | 'hi';
+
 export interface Settings {
   shopName: string;
+  /** Language of the customer-facing screens. The Staff area stays English. */
+  language: Lang;
   provider: TryOnProviderId;
   geminiKey: string;
   geminiModel: string;
@@ -54,6 +58,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   shopName: 'JyotsnaSareeCenter',
+  language: 'en',
   provider: 'demo',
   geminiKey: '',
   geminiModel: 'gemini-2.5-flash-image',

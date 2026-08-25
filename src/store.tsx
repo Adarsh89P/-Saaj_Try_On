@@ -153,11 +153,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!p) return;
     const id = ++runId.current;
 
-    setS((prev) => ({ ...prev, screen: 'processing', prev: 'product', progress: 0, step: 'Reading your photo', compare: 'after', error: undefined }));
+    setS((prev) => ({ ...prev, screen: 'processing', prev: 'product', progress: 0, step: 'step.reading', compare: 'after', error: undefined }));
 
     try {
       const [person, garment] = await Promise.all([db.getImage(personKey), p.imageKey ? db.getImage(p.imageKey) : undefined]);
-      if (!person) throw new Error('Your photo is no longer available. Please take it again.');
+      if (!person) throw new Error('error.photoGone');
 
       const result = await runTryOn({ person, garment, product: p }, settings, (percent, step) => {
         if (runId.current === id) setS((prev) => ({ ...prev, progress: percent, step }));
@@ -175,7 +175,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setS((prev) => ({
         ...prev,
         screen: 'product',
-        error: err instanceof Error ? err.message : 'Something went wrong with the try-on.',
+        error: err instanceof Error ? err.message : 'error.tryOn',
       }));
     }
   }, [products, settings]);
