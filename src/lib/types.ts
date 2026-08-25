@@ -40,6 +40,10 @@ export interface Settings {
   provider: TryOnProviderId;
   geminiKey: string;
   geminiModel: string;
+  /** Text model used to read a garment photo when bulk-adding stock. */
+  geminiTextModel: string;
+  /** Billed requests allowed per day. 0 turns the cap off. */
+  dailyRequestLimit: number;
   /** Runs new catalogue photos through background removal as they are added. */
   cleanGarmentPhotos: boolean;
   /** Demo provider only: how long the fake render takes, in seconds. */
@@ -53,6 +57,8 @@ export const DEFAULT_SETTINGS: Settings = {
   provider: 'demo',
   geminiKey: '',
   geminiModel: 'gemini-2.5-flash-image',
+  geminiTextModel: 'gemini-2.5-flash',
+  dailyRequestLimit: 200,
   cleanGarmentPhotos: true,
   demoSeconds: 2.6,
   privacyNotice: true,

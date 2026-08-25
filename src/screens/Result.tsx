@@ -1,10 +1,45 @@
+import { useState } from 'react';
 import { useStore } from '../store';
 import { Media } from '../components/Img';
+import { getImage } from '../lib/db';
 import { money } from '../lib/image';
 
 export function Result() {
-  const { s, product, products, go, setCompare, saveCurrent, startTryOn } = useStore();
+  const { s, settings, product, products, go, setCompare, saveCurrent, startTryOn } = useStore();
   const alsoTry = products.filter((p) => p.id !== s.productId).slice(0, 6);
+  const [shareNote, setShareNote] = useState<string>();
+
+  /** Sending the try-on to WhatsApp takes the photo off the tablet, so it only
+   *  ever happens on the customer's own deliberate tap. */
+  const share = async () => {
+    setShareNote(undefined);
+    if (!s.resultKey) return;
+    try {
+      const blob = await getImage(s.resultKey);
+      if (!blob) { setShareNote('That try-on is no longer available.'); return; }
+
+      const file = new File([blob], `${product?.name ?? 'try-on'}.jpg`, { type: blob.type || 'image/jpeg' });
+      const text = product
+        ? `${product.name}, size ${s.size} — ${money(product.price)} at ${settings.shopName}`
+        : settings.shopName;
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        return;
+      }
+      // Older browsers can still pass the message along; the picture cannot go.
+      if (navigator.share) {
+        await navigator.share({ text });
+        setShareNote('Only the message could be sent from this device. Take a screenshot to send the picture.');
+        return;
+      }
+      setShareNote('Sharing is not available on this device. Take a screenshot to send the picture.');
+    } catch (err) {
+      // A cancelled share picker is not an error worth showing.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      setShareNote('Could not open sharing on this device. Take a screenshot instead.');
+    }
+  };
 
   return (
     <div className="page">
@@ -37,8 +72,20 @@ export function Result() {
 
           <div className="stack">
             <button type="button" className="btn btn--primary btn--block" onClick={saveCurrent}>Save to my selection</button>
-            <button type="button" className="btn btn--outline btn--block" onClick={() => go('collection')}>Browse everything</button>
+            {s.resultKey && (
+              <button type="button" className="btn btn--outline btn--block" onClick={() => void share()}>
+                Send to family on WhatsApp
+              </button>
+            )}
+            <button type="button" className="btn btn--ghost btn--block" onClick={() => go('collection')}>Browse everything</button>
           </div>
+
+          {shareNote && <p className="tiny muted" style={{ margin: 0 }}>{shareNote}</p>}
+          {s.resultKey && !shareNote && (
+            <p className="tiny muted" style={{ margin: 0 }}>
+              Sharing sends this picture off the tablet to whoever you choose. Nothing is sent unless you tap.
+            </p>
+          )}
         </div>
       </div>
 

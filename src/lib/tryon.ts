@@ -1,5 +1,6 @@
+import { bumpUsage, loadUsage } from './db';
 import { base64ToBlob, blobToBase64, loadBitmap } from './image';
-import type { Product, Settings, TryOnProviderId } from './types';
+import { CATEGORIES, type Product, type Settings, type TryOnProviderId } from './types';
 
 export interface TryOnRequest {
   person: Blob;
@@ -112,6 +113,90 @@ async function runDemo(req: TryOnRequest, onProgress: ProgressFn, seconds: numbe
  * Google — no server of ours ever sees the customer's photo.
  * ------------------------------------------------------------------- */
 
+/* ── spend guard ────────────────────────────────────────────────────────
+ * Every call below is billed by Google. Without a ceiling, a slow afternoon of
+ * curious try-ons becomes a bill the shop finds out about later.
+ * ------------------------------------------------------------------- */
+
+export class LimitReached extends Error {}
+
+async function reserveRequest(settings: Settings) {
+  const usage = await loadUsage();
+  if (settings.dailyRequestLimit > 0 && usage.count >= settings.dailyRequestLimit) {
+    throw new LimitReached(
+      `Today's limit of ${settings.dailyRequestLimit} AI requests has been used. ` +
+      `Raise it in Staff → Settings, or switch to the demo engine for the rest of the day.`,
+    );
+  }
+  await bumpUsage();
+}
+
+/** Shared request body for both Gemini endpoints. */
+async function requestParts(prompt: string, images: Blob[]) {
+  const encoded = await Promise.all(images.map(blobToBase64));
+  return [
+    { text: prompt },
+    ...encoded.map((data, i) => ({ inline_data: { mime_type: images[i].type || 'image/jpeg', data } })),
+  ];
+}
+
+function apiError(status: number, detail: string, whatFailed: string) {
+  let message = `${whatFailed} service returned ${status}.`;
+  try {
+    const parsed = JSON.parse(detail);
+    if (parsed?.error?.message) message = parsed.error.message;
+  } catch { /* keep the status-code message */ }
+  return new Error(message);
+}
+
+/** Reads a garment photo and returns what it is, as JSON. Used by bulk add so
+ *  staff type a price and nothing else. */
+export async function describeGarment(
+  photo: Blob,
+  settings: Settings,
+): Promise<{ name?: string; cat?: string; color?: string; sizes?: string[] }> {
+  if (!settings.geminiKey) throw new Error('No Gemini API key set.');
+  await reserveRequest(settings);
+
+  const prompt =
+    `This is a photograph of a single garment sold in an Indian ladies' clothing shop. ` +
+    `Identify it and reply with JSON only, no prose, in this exact shape: ` +
+    `{"name": string, "cat": string, "color": string, "sizes": string[]}. ` +
+    `"cat" must be exactly one of: ${CATEGORIES.join(', ')}. ` +
+    `"name" is a short shop-floor name of at most four words, naming the fabric or work and the garment ` +
+    `(for example "Banarasi Silk Saree" or "Chikankari Cotton Kurti"). Do not include the colour in the name. ` +
+    `"color" is one common colour word for the main body of the garment. ` +
+    `"sizes" is ["Free size"] for a saree or a dupatta, and otherwise the usual run ["S","M","L","XL"].`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiTextModel)}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.geminiKey },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: await requestParts(prompt, [photo]) }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+    }),
+  });
+
+  if (!res.ok) throw apiError(res.status, await res.text().catch(() => ''), 'Photo reading');
+
+  const data = await res.json();
+  const text: string = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text ?? '';
+  try {
+    // Models sometimes wrap JSON in a code fence even when asked not to.
+    const parsed = JSON.parse(text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim());
+    return {
+      name: typeof parsed.name === 'string' ? parsed.name.slice(0, 60) : undefined,
+      cat: CATEGORIES.includes(parsed.cat) ? parsed.cat : undefined,
+      color: typeof parsed.color === 'string' ? parsed.color.slice(0, 24) : undefined,
+      sizes: Array.isArray(parsed.sizes) ? parsed.sizes.filter((z: unknown) => typeof z === 'string').slice(0, 8) : undefined,
+    };
+  } catch {
+    // A shape we cannot read is not worth failing the whole batch over.
+    return {};
+  }
+}
+
 /** One image-editing round trip to Google. Shared by the try-on and by the
  *  catalogue's background removal — same endpoint, same key, same error shape. */
 async function geminiEdit(
@@ -121,37 +206,16 @@ async function geminiEdit(
   whatFailed: string,
 ): Promise<Blob> {
   if (!settings.geminiKey) throw new Error('No Gemini API key set. Add one in Staff → Settings, or switch to the demo engine.');
+  await reserveRequest(settings);
 
-  const encoded = await Promise.all(images.map(blobToBase64));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiModel)}:generateContent`;
-
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.geminiKey },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            ...encoded.map((data, i) => ({
-              inline_data: { mime_type: images[i].type || 'image/jpeg', data },
-            })),
-          ],
-        },
-      ],
-    }),
+    body: JSON.stringify({ contents: [{ role: 'user', parts: await requestParts(prompt, images) }] }),
   });
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    let message = `${whatFailed} service returned ${res.status}.`;
-    try {
-      const parsed = JSON.parse(detail);
-      if (parsed?.error?.message) message = parsed.error.message;
-    } catch { /* keep the status-code message */ }
-    throw new Error(message);
-  }
+  if (!res.ok) throw apiError(res.status, await res.text().catch(() => ''), whatFailed);
 
   const data = await res.json();
   const parts: Array<{ inlineData?: { data: string; mimeType?: string }; inline_data?: { data: string; mime_type?: string } }> =

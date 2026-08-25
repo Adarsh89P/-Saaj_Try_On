@@ -64,6 +64,7 @@ interface Store {
   finish: () => Promise<void>;
   product: Product | undefined;
   saveProduct: (p: Product) => Promise<void>;
+  addProducts: (list: Product[]) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   markCollected: (code: string) => Promise<void>;
@@ -292,6 +293,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await db.saveProducts(next);
   }, [products]);
 
+  /** One write and one re-render for a whole batch, rather than one per piece. */
+  const addProducts = useCallback(async (list: Product[]) => {
+    if (!list.length) return;
+    const next = [...products, ...list];
+    setProducts(next);
+    await db.saveProducts(next);
+  }, [products]);
+
   const deleteProduct = useCallback(async (id: string) => {
     const target = products.find((x) => x.id === id);
     const next = products.filter((x) => x.id !== id);
@@ -326,7 +335,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCompare: (compare) => patch({ compare }),
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
-    saveProduct, deleteProduct, updateSettings, markCollected, clearOrders,
+    saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

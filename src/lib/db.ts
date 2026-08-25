@@ -61,6 +61,35 @@ export async function saveOrders(orders: Order[]) {
   await set(ORDERS, orders, store);
 }
 
+/* ── billed-request usage ───────────────────────────────────────────── */
+
+const USAGE = 'usage';
+
+export interface Usage {
+  /** Local calendar day, so the count rolls over when the shop opens, not at UTC midnight. */
+  date: string;
+  count: number;
+}
+
+export function today(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export async function loadUsage(): Promise<Usage> {
+  const stored = await get<Usage>(USAGE, store);
+  return stored?.date === today() ? stored : { date: today(), count: 0 };
+}
+
+/** Counts an attempt, not a success — a request that errors after reaching
+ *  Google may still be billed, so the guard has to assume it was. */
+export async function bumpUsage(by = 1): Promise<Usage> {
+  const current = await loadUsage();
+  const next = { date: current.date, count: current.count + by };
+  await set(USAGE, next, store);
+  return next;
+}
+
 /* ── one-shot flags ─────────────────────────────────────────────────── */
 
 const FLAGS = 'flags';

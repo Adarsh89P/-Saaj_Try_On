@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store';
 import { Img } from '../components/Img';
 import { money } from '../lib/image';
 import { PROVIDERS } from '../lib/tryon';
 import { ProductForm } from './ProductForm';
+import { BulkAdd } from './BulkAdd';
+import { loadUsage, type Usage } from '../lib/db';
 import type { Product } from '../lib/types';
 
 type Tab = 'catalogue' | 'pickups' | 'settings';
@@ -72,6 +74,7 @@ function PinGate({ pin, onUnlock, onExit }: { pin: string; onUnlock: () => void;
 function Catalogue() {
   const { products } = useStore();
   const [editing, setEditing] = useState<Product | 'new' | null>(null);
+  const [bulk, setBulk] = useState(false);
   const sorted = useMemo(() => [...products].sort((a, b) => a.name.localeCompare(b.name)), [products]);
   const missingPhotos = products.filter((p) => !p.imageKey).length;
 
@@ -79,7 +82,10 @@ function Catalogue() {
     <>
       <div className="between">
         <p className="muted" style={{ margin: 0 }}>{products.length} pieces in the catalogue</p>
-        <button type="button" className="btn btn--primary btn--sm" onClick={() => setEditing('new')}>Add a piece</button>
+        <div className="hstack" style={{ gap: 8 }}>
+          <button type="button" className="btn btn--outline btn--sm" onClick={() => setBulk(true)}>Add several</button>
+          <button type="button" className="btn btn--primary btn--sm" onClick={() => setEditing('new')}>Add a piece</button>
+        </div>
       </div>
 
       <div className="tablewrap">
@@ -129,6 +135,7 @@ function Catalogue() {
       {editing && (
         <ProductForm initial={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />
       )}
+      {bulk && <BulkAdd onClose={() => setBulk(false)} />}
     </>
   );
 }
@@ -193,6 +200,9 @@ function Pickups() {
 function SettingsPane() {
   const { settings, updateSettings } = useStore();
   const [showKey, setShowKey] = useState(false);
+  const [usage, setUsage] = useState<Usage>();
+
+  useEffect(() => { void loadUsage().then(setUsage); }, []);
 
   return (
     <>
@@ -238,9 +248,31 @@ function SettingsPane() {
               {showKey ? 'Hide key' : 'Show key'}
             </button>
           </div>
+          <div className="hstack" style={{ gap: 10 }}>
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="model">Image model</label>
+              <input id="model" className="input" value={settings.geminiModel} onChange={(e) => void updateSettings({ geminiModel: e.target.value.trim() })} />
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="tmodel">Photo-reading model</label>
+              <input id="tmodel" className="input" value={settings.geminiTextModel} onChange={(e) => void updateSettings({ geminiTextModel: e.target.value.trim() })} />
+            </div>
+          </div>
+
           <div className="field">
-            <label htmlFor="model">Model</label>
-            <input id="model" className="input" value={settings.geminiModel} onChange={(e) => void updateSettings({ geminiModel: e.target.value.trim() })} />
+            <label htmlFor="cap">Daily request limit</label>
+            <input
+              id="cap" className="input" type="number" inputMode="numeric" min={0}
+              value={settings.dailyRequestLimit}
+              onChange={(e) => void updateSettings({ dailyRequestLimit: Math.max(0, Math.round(Number(e.target.value))) })}
+            />
+            <p className="tiny muted" style={{ margin: '4px 0 0', paddingLeft: 6 }}>
+              Every try-on, background removal and photo reading counts as one billed request.
+              {' '}<strong>{usage?.count ?? 0} used today.</strong>
+              {settings.dailyRequestLimit > 0
+                ? ` The kiosk stops asking Google once it reaches ${settings.dailyRequestLimit} and says so.`
+                : ' Set to 0, so there is no ceiling — a busy day can run up a bill.'}
+            </p>
           </div>
           <label className="hstack" style={{ gap: 10, cursor: 'pointer' }}>
             <input
