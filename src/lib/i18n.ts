@@ -47,6 +47,7 @@ const en: Record<string, string> = {
   'collection.search': 'Search sarees, kurtis, colours…',
   'collection.searchLabel': 'Search the collection',
   'collection.empty': 'Nothing here yet. Try another category, or ask a staff member what’s just come in.',
+  'collection.clear': 'Clear the search',
 
   'photo.title': 'Take your photo',
   'photo.tip1': 'Stand about two steps back, facing the camera',
@@ -70,6 +71,8 @@ const en: Record<string, string> = {
   'cam.denied': 'Camera permission was refused. Allow it in the browser settings, or upload a photo instead.',
   'cam.unsupported': 'No camera available on this device. Upload a photo instead.',
   'cam.badFile': 'That file could not be read as an image.',
+  'cam.timerHint': 'Three seconds to step back before it takes the photo.',
+  'cam.stopTimer': 'Stop the timer',
 
   'product.gone': 'That piece is no longer in the catalogue.',
   'product.stock': '{n} in stock',
@@ -96,6 +99,9 @@ const en: Record<string, string> = {
   'result.shareTextOnly': 'Only the message could be sent from this device. Take a screenshot to send the picture.',
   'result.shareNone': 'Sharing is not available on this device. Take a screenshot to send the picture.',
   'result.shareFailed': 'Could not open sharing on this device. Take a screenshot instead.',
+  'result.slide': 'Slide',
+  'result.compareLabel': 'Slide between your photo and the try-on',
+  'result.compareHint': 'Drag across the picture to compare.',
   'result.browse': 'Browse everything',
   'result.next': 'Try the next one on',
 
@@ -117,6 +123,13 @@ const en: Record<string, string> = {
   'code.newSelection': 'Start a new selection — keep my photo',
   'code.finish': 'Finish — next customer',
   'code.finishHint': 'Finishing deletes the photo and clears the tablet for the next person.',
+
+  'toast.saved': 'Kept in your selection.',
+  'toast.alreadySaved': 'That size is already in your selection.',
+  'toast.removed': 'Removed from your selection.',
+  'toast.photoDeleted': 'Your photo and try-ons are off this tablet.',
+  'toast.undo': 'Undo',
+  'toast.dismiss': 'Dismiss',
 
   'error.photoGone': 'Your photo is no longer available. Please take it again.',
   'error.tryOn': 'Something went wrong with the try-on.',
@@ -157,6 +170,7 @@ const hi: Record<string, string> = {
   'collection.search': 'साड़ी, कुर्ती, रंग खोजिए…',
   'collection.searchLabel': 'कलेक्शन में खोजिए',
   'collection.empty': 'यहाँ अभी कुछ नहीं है। दूसरी कैटेगरी देखिए, या स्टाफ से पूछिए कि नया क्या आया है।',
+  'collection.clear': 'खोज हटाइए',
 
   'photo.title': 'अपनी फोटो लीजिए',
   'photo.tip1': 'कैमरे की तरफ मुँह करके दो कदम पीछे खड़ी हों',
@@ -180,6 +194,8 @@ const hi: Record<string, string> = {
   'cam.denied': 'कैमरे की अनुमति नहीं मिली। ब्राउज़र सेटिंग में अनुमति दीजिए, या फोटो अपलोड कीजिए।',
   'cam.unsupported': 'इस डिवाइस में कैमरा नहीं है। फोटो अपलोड कीजिए।',
   'cam.badFile': 'यह फाइल फोटो के रूप में नहीं खुल पाई।',
+  'cam.timerHint': 'फोटो खिंचने से पहले तीन सेकंड — तब तक पीछे हट जाइए।',
+  'cam.stopTimer': 'गिनती रोकिए',
 
   'product.gone': 'यह पीस अब कैटलॉग में नहीं है।',
   'product.stock': 'स्टॉक में {n}',
@@ -206,6 +222,9 @@ const hi: Record<string, string> = {
   'result.shareTextOnly': 'इस डिवाइस से सिर्फ मैसेज भेजा जा सका। फोटो भेजने के लिए स्क्रीनशॉट लीजिए।',
   'result.shareNone': 'इस डिवाइस में भेजने की सुविधा नहीं है। फोटो भेजने के लिए स्क्रीनशॉट लीजिए।',
   'result.shareFailed': 'इस डिवाइस पर भेजना नहीं खुल पाया। स्क्रीनशॉट लेकर भेजिए।',
+  'result.slide': 'सरकाइए',
+  'result.compareLabel': 'अपनी फोटो और ट्राई-ऑन के बीच सरकाइए',
+  'result.compareHint': 'तुलना करने के लिए फोटो पर उँगली सरकाइए।',
   'result.browse': 'सब कुछ देखिए',
   'result.next': 'अगला ट्राई कीजिए',
 
@@ -227,6 +246,13 @@ const hi: Record<string, string> = {
   'code.newSelection': 'नई पसंद शुरू कीजिए — फोटो रहने दीजिए',
   'code.finish': 'खत्म — अगला ग्राहक',
   'code.finishHint': 'खत्म करने पर फोटो मिट जाती है और टैबलेट अगले ग्राहक के लिए साफ़ हो जाता है।',
+
+  'toast.saved': 'आपकी पसंद में रख दिया।',
+  'toast.alreadySaved': 'यह साइज़ पहले से आपकी पसंद में है।',
+  'toast.removed': 'आपकी पसंद से हटा दिया।',
+  'toast.photoDeleted': 'आपकी फोटो और ट्राई-ऑन इस टैबलेट से हट गए हैं।',
+  'toast.undo': 'वापस लाइए',
+  'toast.dismiss': 'हटाइए',
 
   'error.photoGone': 'आपकी फोटो अब उपलब्ध नहीं है। कृपया दोबारा लीजिए।',
   'error.tryOn': 'ट्राई-ऑन में कुछ गड़बड़ हो गई।',

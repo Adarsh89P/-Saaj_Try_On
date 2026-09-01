@@ -2,6 +2,7 @@ import { useStore } from '../store';
 import { Media } from '../components/Img';
 import { money } from '../lib/image';
 import { useT } from '../lib/i18n';
+import { haptic } from '../lib/haptics';
 
 export function Product() {
   const { s, product, back, setSize, startTryOn, saveCurrent } = useStore();
@@ -52,7 +53,7 @@ export function Product() {
                   className="chip"
                   aria-pressed={s.size === z}
                   style={{ minWidth: 56, minHeight: 48 }}
-                  onClick={() => setSize(z)}
+                  onClick={() => { haptic('select'); setSize(z); }}
                 >
                   {z}
                 </button>
@@ -61,7 +62,7 @@ export function Product() {
           </div>
 
           <div className="stack">
-            <button type="button" className="btn btn--primary btn--block" onClick={() => void startTryOn(product.id)}>
+            <button type="button" className="btn btn--primary btn--block" onClick={() => { haptic('select'); void startTryOn(product.id); }}>
               {s.personKey ? t('product.tryOn') : t('product.needPhoto')}
             </button>
             <button type="button" className="btn btn--outline btn--block" onClick={saveCurrent}>

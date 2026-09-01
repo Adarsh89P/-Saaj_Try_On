@@ -168,7 +168,7 @@ export function BulkAdd({ onClose }: { onClose: () => void }) {
               <label className="hstack" style={{ gap: 10, cursor: 'pointer' }}>
                 <input
                   type="checkbox" checked={clean} onChange={(e) => setClean(e.target.checked)}
-                  style={{ width: 22, height: 22, accentColor: 'var(--color-accent-500)' }}
+                  style={{ width: 22, height: 22, accentColor: 'var(--accent-solid)' }}
                 />
                 <span style={{ fontSize: 14 }}>Also remove the backgrounds (doubles the requests)</span>
               </label>

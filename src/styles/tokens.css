@@ -37,16 +37,60 @@
   --color-accent-2-800: #3d472b;
   --color-accent-2-900: #272e1b;
 
+  /* ── Accent roles ────────────────────────────────────────────────────────
+     The scale above is the palette; these are the jobs. The distinction that
+     matters: --color-accent (#c67139) and -500 are surface colours and carry
+     no text — a cream label on either measures 2.9:1, which is under AA and
+     visibly soft on a tablet held under a shop's window light. Anything with
+     words on it uses --accent-solid (4.9:1) or --accent-2-solid (5.0:1).
+     Same hue family, same warmth, one step down in lightness. */
+  --accent-solid: #a85a28;
+  --accent-solid-pressed: #8c491a;
+  --accent-2-solid: #63744a;
+  --on-accent: #fffaf4;
+
   --font-heading: "Caprasimo", system-ui, sans-serif;
   --font-body: "Figtree", system-ui, sans-serif;
 
+  /* ── Type scale ──────────────────────────────────────────────────────────
+     Fluid between the 360px phone a staff member tests on and the 834px shop
+     tablet, so there is one scale rather than a set of breakpoint overrides
+     that drift apart. The ratio is deliberately gentle: the kiosk is read at
+     arm's length, and a display size that works on a laptop shouts here. */
+  --text-xs:    clamp(0.78rem, 0.76rem + 0.10vw, 0.84rem);
+  --text-sm:    clamp(0.84rem, 0.81rem + 0.14vw, 0.94rem);
+  --text-base:  clamp(0.95rem, 0.92rem + 0.16vw, 1.06rem);
+  --text-lg:    clamp(1.06rem, 1.00rem + 0.30vw, 1.25rem);
+  --text-xl:    clamp(1.30rem, 1.16rem + 0.62vw, 1.70rem);
+  --text-2xl:   clamp(1.62rem, 1.36rem + 1.15vw, 2.35rem);
+  --text-3xl:   clamp(2.05rem, 1.60rem + 2.00vw, 3.05rem);
+
+  /* Caprasimo is a heavy display face; at large sizes it needs the letters
+     pulled in and the lines closed up or it reads as a poster, not a heading. */
+  --tracking-display: -0.018em;
+  --leading-display: 1.06;
+  /* Long-form Hindi sits taller than Latin and needs the extra line. */
+  --leading-body: 1.55;
+  --measure: 62ch;
+
   --radius-sm: 8px;
+
   --radius-md: 16px;
   --radius-lg: 28px;
+  --radius-xl: 34px;
 
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+  /* Wide and faint rather than tight and dark, and tinted with the warm
+     charcoal of the background rather than neutral black, so an elevated
+     surface reads as lifted off this paper instead of pasted onto it. */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent);
+  --shadow-md: 0 6px 18px -6px color-mix(in srgb, #2e2b25 26%, transparent);
+  --shadow-lg: 0 20px 48px -18px color-mix(in srgb, #2e2b25 40%, transparent);
+  /* A hairline of light along the top edge; what makes a raised panel look
+     like it has a physical edge rather than a drop shadow underneath it. */
+  --edge-light: inset 0 1px 0 color-mix(in srgb, #fffaf4 40%, transparent);
+
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
 
   /* Safe-area passthroughs so the kiosk sits right under notches / gesture bars */
   --sa-top: env(safe-area-inset-top, 0px);

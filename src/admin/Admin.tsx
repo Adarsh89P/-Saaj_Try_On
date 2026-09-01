@@ -244,7 +244,7 @@ function SettingsPane() {
           <input
             id="secs" type="range" min={1} max={8} step={0.2} value={settings.demoSeconds}
             onChange={(e) => void updateSettings({ demoSeconds: Number(e.target.value) })}
-            style={{ width: '100%', accentColor: 'var(--color-accent-500)' }}
+            style={{ width: '100%', accentColor: 'var(--accent-solid)' }}
           />
         </div>
       )}
@@ -292,7 +292,7 @@ function SettingsPane() {
             <input
               type="checkbox" checked={settings.cleanGarmentPhotos}
               onChange={(e) => void updateSettings({ cleanGarmentPhotos: e.target.checked })}
-              style={{ width: 22, height: 22, accentColor: 'var(--color-accent-500)' }}
+              style={{ width: 22, height: 22, accentColor: 'var(--accent-solid)' }}
             />
             <span style={{ fontSize: 14 }}>Remove the background from new catalogue photos</span>
           </label>
@@ -323,7 +323,7 @@ function SettingsPane() {
         <input
           type="checkbox" checked={settings.privacyNotice}
           onChange={(e) => void updateSettings({ privacyNotice: e.target.checked })}
-          style={{ width: 22, height: 22, accentColor: 'var(--color-accent-500)' }}
+          style={{ width: 22, height: 22, accentColor: 'var(--accent-solid)' }}
         />
         <span style={{ fontSize: 14 }}>Show the privacy note on the photo screen</span>
       </label>

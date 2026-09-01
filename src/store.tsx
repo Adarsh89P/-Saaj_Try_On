@@ -5,6 +5,18 @@ import { runTryOn } from './lib/tryon';
 import { ensureCatalogue, makeCode } from './lib/seed';
 import { makeThumb } from './lib/image';
 import { DEFAULT_SETTINGS, type Order, type Product, type SavedItem, type Settings } from './lib/types';
+import { haptic } from './lib/haptics';
+
+/** A short line of feedback at the bottom of the screen, optionally with one
+ *  undo. Nothing in the kiosk is destructive enough to need a dialog, and a
+ *  dialog in the middle of a shop stops the customer dead. */
+export interface Toast {
+  id: number;
+  msg: string;
+  tone: 'ok' | 'warn';
+  undo?: () => void;
+  undoLabel?: string;
+}
 
 export type Screen =
   | 'home' | 'photo' | 'preview' | 'collection' | 'product'
@@ -22,7 +34,7 @@ interface Session {
   saved: SavedItem[];
   progress: number;
   step: string;
-  compare: 'before' | 'after';
+  compare: 'before' | 'after' | 'slide';
   resultKey?: string;
   resultSimulated: boolean;
   pendingTryOn: boolean;
@@ -35,12 +47,15 @@ interface Session {
 
 const freshSession = (): Session => ({
   screen: 'home', prev: 'home', cat: 'All', query: '', saved: [],
-  progress: 0, step: '', compare: 'after', resultSimulated: false,
+  progress: 0, step: '', compare: 'slide', resultSimulated: false,
   pendingTryOn: false, code: makeCode(), photoDeleted: false,
 });
 
 interface Store {
   ready: boolean;
+  toast?: Toast;
+  notify: (msg: string, opts?: { tone?: 'ok' | 'warn'; undo?: () => void; undoLabel?: string }) => void;
+  dismissToast: (id?: number) => void;
   products: Product[];
   settings: Settings;
   orders: Order[];
@@ -50,7 +65,7 @@ interface Store {
   setCat: (cat: string) => void;
   setQuery: (q: string) => void;
   setSize: (size: string) => void;
-  setCompare: (c: 'before' | 'after') => void;
+  setCompare: (c: 'before' | 'after' | 'slide') => void;
   openProduct: (id: string) => void;
   setDraftPhoto: (blob: Blob) => Promise<void>;
   confirmPhoto: () => void;
@@ -96,9 +111,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [s, setS] = useState<Session>(freshSession);
+  const [toast, setToast] = useState<Toast>();
 
   // A cancelled try-on must not write its result in late.
   const runId = useRef(0);
+  const toastId = useRef(0);
+
+  const notify = useCallback((msg: string, opts?: { tone?: 'ok' | 'warn'; undo?: () => void; undoLabel?: string }) => {
+    setToast({ id: ++toastId.current, msg, tone: opts?.tone ?? 'ok', undo: opts?.undo, undoLabel: opts?.undoLabel });
+  }, []);
+
+  /** Ignores a stale id so a toast that has already been replaced cannot have
+   *  its timer close the one that took its place. */
+  const dismissToast = useCallback((id?: number) => {
+    setToast((prev) => (prev && (id === undefined || prev.id === id) ? undefined : prev));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -178,7 +205,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!p) return;
     const id = ++runId.current;
 
-    setS((prev) => ({ ...prev, screen: 'processing', prev: 'product', progress: 0, step: 'step.reading', compare: 'after', error: undefined }));
+    setS((prev) => ({ ...prev, screen: 'processing', prev: 'product', progress: 0, step: 'step.reading', compare: 'slide', error: undefined }));
 
     try {
       const [person, garment] = await Promise.all([db.getImage(personKey), p.imageKey ? db.getImage(p.imageKey) : undefined]);
@@ -192,7 +219,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const key = await db.saveImage(result.image, 'result');
       setS((prev) => ({
         ...prev, screen: 'result', progress: 100, resultKey: key,
-        resultSimulated: result.simulated, compare: 'after',
+        resultSimulated: result.simulated, compare: 'slide',
         productId, size: prev.size ?? p.sizes[0],
       }));
     } catch (err) {
@@ -238,25 +265,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, [doTryOn]);
 
+  /** Reads the session directly rather than from inside a state updater: the
+   *  toast is a side effect, and an updater that fires twice (or during a
+   *  render pass) must stay pure. */
   const saveCurrent = useCallback(() => {
-    setS((prev) => {
-      const p = products.find((x) => x.id === prev.productId);
-      if (!p) return prev;
-      const size = prev.size || p.sizes[0];
-      const key = `${p.id}-${size}`;
-      if (prev.saved.some((r) => r.key === key)) return { ...prev, screen: 'selection', prev: prev.screen };
-      const item: SavedItem = {
-        key, productId: p.id, name: p.name, size, price: p.price,
-        stock: p.stock, imageKey: p.imageKey, thumbKey: p.thumbKey,
-        resultKey: prev.screen === 'result' ? prev.resultKey : undefined,
-      };
-      return { ...prev, saved: [...prev.saved, item], screen: 'selection', prev: prev.screen };
-    });
-  }, [products]);
+    const p = products.find((x) => x.id === s.productId);
+    if (!p) return;
+    const size = s.size || p.sizes[0];
+    const key = `${p.id}-${size}`;
+    if (s.saved.some((r) => r.key === key)) {
+      haptic('warn');
+      notify('toast.alreadySaved', { tone: 'warn' });
+      setS((prev) => ({ ...prev, screen: 'selection', prev: prev.screen }));
+      return;
+    }
+    const item: SavedItem = {
+      key, productId: p.id, name: p.name, size, price: p.price,
+      stock: p.stock, imageKey: p.imageKey, thumbKey: p.thumbKey,
+      resultKey: s.screen === 'result' ? s.resultKey : undefined,
+    };
+    haptic('success');
+    notify('toast.saved');
+    setS((prev) => ({ ...prev, saved: [...prev.saved, item], screen: 'selection', prev: prev.screen }));
+  }, [products, s, notify]);
 
+  /** Removing is undoable: the row goes back where it was, not onto the end,
+   *  so the list the customer is looking at does not reshuffle under her. */
   const removeSaved = useCallback((key: string) => {
+    const at = s.saved.findIndex((r) => r.key === key);
+    if (at < 0) return;
+    const row = s.saved[at];
+    haptic('warn');
+    notify('toast.removed', {
+      tone: 'warn',
+      undoLabel: 'toast.undo',
+      undo: () => setS((cur) => {
+        if (cur.saved.some((r) => r.key === key)) return cur;
+        const back = [...cur.saved];
+        back.splice(Math.min(at, back.length), 0, row);
+        return { ...cur, saved: back };
+      }),
+    });
     setS((prev) => ({ ...prev, saved: prev.saved.filter((r) => r.key !== key) }));
-  }, []);
+  }, [s.saved, notify]);
 
   const checkout = useCallback(async () => {
     const order: Order = {
@@ -286,7 +337,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       photoDeleted: true,
       saved: prev.saved.map((r) => ({ ...r, resultKey: undefined })),
     }));
-  }, [products]);
+    notify('toast.photoDeleted');
+  }, [products, notify]);
 
   /** Clears the selection and the code but keeps the photo, so the same
    *  customer can start choosing again without standing for another photo. */
@@ -356,19 +408,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setCat = useCallback((cat: string) => patch({ cat }), [patch]);
   const setQuery = useCallback((query: string) => patch({ query }), [patch]);
   const setSize = useCallback((size: string) => patch({ size }), [patch]);
-  const setCompare = useCallback((compare: 'before' | 'after') => patch({ compare }), [patch]);
+  const setCompare = useCallback((compare: 'before' | 'after' | 'slide') => patch({ compare }), [patch]);
 
   // Rebuilding this object on every render handed every consumer a new context
   // value each time, so a single keystroke in the search box re-rendered the
   // whole tree. Now only real state changes propagate.
   const value: Store = useMemo(() => ({
-    ready, products, settings, orders, s, go, back, product,
+    ready, products, settings, orders, s, go, back, product, toast, notify, dismissToast,
     setCat, setQuery, setSize, setCompare,
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
     saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,
   }), [
-    ready, products, settings, orders, s, go, back, product,
+    ready, products, settings, orders, s, go, back, product, toast, notify, dismissToast,
     setCat, setQuery, setSize, setCompare,
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,

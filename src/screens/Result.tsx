@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { Media } from '../components/Img';
+import { Compare } from '../components/Compare';
 import { getImage } from '../lib/db';
 import { money } from '../lib/image';
 import { useT } from '../lib/i18n';
+import { haptic } from '../lib/haptics';
 
 export function Result() {
   const { s, settings, product, products, go, setCompare, saveCurrent, startTryOn } = useStore();
@@ -46,17 +48,22 @@ export function Result() {
   return (
     <div className="page">
       <div className="seg">
-        <button type="button" aria-pressed={s.compare === 'before'} onClick={() => setCompare('before')}>{t('result.before')}</button>
-        <button type="button" aria-pressed={s.compare === 'after'} onClick={() => setCompare('after')}>{t('result.after')}</button>
+        <button type="button" aria-pressed={s.compare === 'slide'} onClick={() => { haptic('select'); setCompare('slide'); }}>{t('result.slide')}</button>
+        <button type="button" aria-pressed={s.compare === 'before'} onClick={() => { haptic('select'); setCompare('before'); }}>{t('result.before')}</button>
+        <button type="button" aria-pressed={s.compare === 'after'} onClick={() => { haptic('select'); setCompare('after'); }}>{t('result.after')}</button>
       </div>
 
       <div className="split">
         <div className="stack">
-          <Media
-            imageKey={s.compare === 'after' ? s.resultKey : s.personKey}
-            label={s.compare === 'after' ? t('result.after') : t('result.before')}
-          />
-          {s.compare === 'after' && s.resultSimulated && (
+          {s.compare === 'slide' ? (
+            <Compare beforeKey={s.personKey} afterKey={s.resultKey} />
+          ) : (
+            <Media
+              imageKey={s.compare === 'after' ? s.resultKey : s.personKey}
+              label={s.compare === 'after' ? t('result.after') : t('result.before')}
+            />
+          )}
+          {s.compare !== 'before' && s.resultSimulated && (
             <p className="notice">{t('result.demoNotice')}</p>
           )}
         </div>
@@ -76,7 +83,7 @@ export function Result() {
                 {t('result.share')}
               </button>
             )}
-            <button type="button" className="btn btn--ghost btn--block" onClick={() => go('collection')}>{t('result.browse')}</button>
+            <button type="button" className="btn btn--ghost btn--block" onClick={() => { haptic('tap'); go('collection'); }}>{t('result.browse')}</button>
           </div>
 
           {shareNote && <p className="tiny muted" style={{ margin: 0 }}>{shareNote}</p>}
@@ -97,7 +104,7 @@ export function Result() {
               type="button"
               className="tile"
               style={{ flex: 'none', width: 96 }}
-              onClick={() => void startTryOn(p.id)}
+              onClick={() => { haptic('select'); void startTryOn(p.id); }}
             >
               <Media imageKey={p.thumbKey ?? p.imageKey} label={p.name} className="media media--3x4 media--r22" />
               <span className="tile__name" style={{ fontSize: 12.5 }}>{p.name}</span>

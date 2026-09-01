@@ -33,15 +33,29 @@ export function Img({ imageKey, alt, className }: { imageKey?: string; alt: stri
   if (!url) return null;
   // Decoding off the main thread keeps a grid of tiles from janking as it
   // paints; the boxes already reserve their space in CSS, so nothing shifts.
-  return <img src={url} alt={alt} className={className} decoding="async" loading="lazy" />;
+  // The fade is on the decode, not on the state change: an image already in the
+  // cache is painted opaque on its first frame and never blinks.
+  return (
+    <img
+      src={url}
+      alt={alt}
+      className={className ? `img ${className}` : 'img'}
+      decoding="async"
+      loading="lazy"
+      onLoad={(e) => e.currentTarget.classList.add('is-in')}
+      ref={(el) => { if (el?.complete) el.classList.add('is-in'); }}
+    />
+  );
 }
 
-/** A media box that falls back to the product name when there is no photo yet. */
+/** A media box that falls back to the product name when there is no photo yet.
+ *  While a stored photo is still being read out of IndexedDB the box holds a
+ *  quiet shimmer, so a grid fills in rather than flashing empty holes. */
 export function Media({
   imageKey, label, className = 'media media--3x4',
 }: { imageKey?: string; label: string; className?: string }) {
   return (
-    <div className={className}>
+    <div className={imageKey ? `${className} media--loading` : className}>
       <Img imageKey={imageKey} alt={label} />
       {!imageKey && <span className="media__empty">{label}</span>}
     </div>

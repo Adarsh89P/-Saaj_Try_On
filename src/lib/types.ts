@@ -62,7 +62,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  shopName: 'JyotsnaSareeCenter',
+  shopName: 'Jyotsna Saree Center',
   language: 'en',
   provider: 'demo',
   geminiKey: '',

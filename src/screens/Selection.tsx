@@ -2,6 +2,8 @@ import { useStore } from '../store';
 import { Img } from '../components/Img';
 import { money } from '../lib/image';
 import { useT } from '../lib/i18n';
+import { HangerIcon } from '../components/Icon';
+import { haptic } from '../lib/haptics';
 
 export function Selection() {
   const { s, products, go, removeSaved, checkout } = useStore();
@@ -13,12 +15,12 @@ export function Selection() {
     return (
       <div className="page">
         <h1 className="h-lg">{t('selection.title')}</h1>
-        <div className="stack center" style={{ alignItems: 'center', gap: 16, padding: '44px 16px' }}>
-          <div aria-hidden="true" style={{ width: 84, height: 84, borderRadius: 999, background: 'var(--color-accent-2-200)' }} />
-          <p className="muted" style={{ margin: 0, fontSize: 15, lineHeight: 1.5, maxWidth: 280 }}>
-            {t('selection.empty')}
-          </p>
-          <button type="button" className="btn btn--primary" onClick={() => go('collection')}>{t('selection.browse')}</button>
+        <div className="empty">
+          <HangerIcon className="icon empty__art" />
+          <p className="empty__text">{t('selection.empty')}</p>
+          <button type="button" className="btn btn--primary" onClick={() => { haptic('select'); go('collection'); }}>
+            {t('selection.browse')}
+          </button>
         </div>
       </div>
     );
@@ -28,7 +30,7 @@ export function Selection() {
     <div className="page">
       <h1 className="h-lg">{t('selection.title')}</h1>
 
-      <div className="stack" style={{ gap: 12 }}>
+      <div className="list">
         {s.saved.map((row) => {
           // Stock is read from the catalogue, not the snapshot taken when the
           // piece was saved, so a staff edit shows up here straight away.
@@ -40,11 +42,11 @@ export function Selection() {
                 <Img imageKey={row.resultKey ?? row.thumbKey ?? row.imageKey} alt={row.name} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.name}</p>
-                <p className="muted" style={{ margin: '3px 0 0', fontSize: 13 }}>
+                <p style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, lineHeight: 1.3 }}>{row.name}</p>
+                <p className="muted" style={{ margin: '3px 0 0', fontSize: 'var(--text-sm)' }}>
                   {t('common.size')} {row.size} · {money(row.price)}
                 </p>
-                <p style={{ margin: '3px 0 0', fontSize: 12.5, fontWeight: 600, color: stock > 0 ? 'var(--color-accent-2-800)' : 'var(--color-accent-700)' }}>
+                <p style={{ margin: '3px 0 0', fontSize: 'var(--text-xs)', fontWeight: 600, color: stock > 0 ? 'var(--color-accent-2-800)' : 'var(--color-accent-700)' }}>
                   {stock <= 0
                     ? t('selection.outOfStock')
                     : stock > 2
@@ -61,8 +63,8 @@ export function Selection() {
       </div>
 
       <div className="between" style={{ alignItems: 'baseline', padding: '0 4px' }}>
-        <span className="muted" style={{ fontSize: 14 }}>{countText}</span>
-        <span style={{ fontFamily: 'var(--font-heading)', fontSize: 22 }}>{money(total)}</span>
+        <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>{countText}</span>
+        <span className="money" style={{ fontSize: 'var(--text-xl)' }}>{money(total)}</span>
       </div>
 
       <button type="button" className="btn btn--primary btn--block" onClick={() => void checkout()}>{t('selection.checkout')}</button>
@@ -81,28 +83,19 @@ export function Staff() {
 
   return (
     <div className="page">
-      <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 28, lineHeight: 1.14 }}>{t('code.title')}</h1>
+      <h1 className="h-lg">{t('code.title')}</h1>
 
-      <div
-        style={{
-          background: 'var(--color-accent-2-500)', borderRadius: 28, padding: '30px 24px',
-          textAlign: 'center', color: '#fbfdf5', boxShadow: 'var(--shadow-md)',
-        }}
-      >
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', opacity: .85 }}>
-          {t('code.label')}
-        </p>
-        <p style={{ margin: '10px 0 0', fontFamily: 'var(--font-heading)', fontSize: 56, lineHeight: 1.05, letterSpacing: '.06em' }}>
-          {s.code}
-        </p>
-        <p style={{ margin: '10px 0 0', fontSize: 14, opacity: .92 }}>{countText} · {money(total)}</p>
+      <div className="panel panel--code">
+        <p className="panel__label">{t('code.label')}</p>
+        <p className="panel__code">{s.code}</p>
+        <p style={{ margin: '10px 0 0', fontSize: 'var(--text-sm)' }}>{countText} · {money(total)}</p>
       </div>
 
       <div className="stack">
         {s.saved.map((row) => (
-          <div key={row.key} className="between" style={{ padding: '14px 16px', background: 'var(--color-neutral-200)', borderRadius: 18 }}>
-            <span style={{ fontSize: 14.5, fontWeight: 600 }}>{row.name}</span>
-            <span className="muted" style={{ fontSize: 13 }}>{t('common.size')} {row.size}</span>
+          <div key={row.key} className="between" style={{ padding: '14px 4px', borderBottom: '1px solid var(--color-divider)' }}>
+            <span style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>{row.name}</span>
+            <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>{t('common.size')} {row.size}</span>
           </div>
         ))}
       </div>
