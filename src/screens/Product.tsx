@@ -3,9 +3,10 @@ import { Media } from '../components/Img';
 import { money } from '../lib/image';
 import { useT } from '../lib/i18n';
 import { haptic } from '../lib/haptics';
+import { OCCASIONS, type Occasion } from '../lib/tryon';
 
 export function Product() {
-  const { s, product, back, setSize, startTryOn, saveCurrent } = useStore();
+  const { s, product, back, setSize, setOccasion, startTryOn, saveCurrent, settings } = useStore();
   const t = useT();
 
   if (!product) {
@@ -60,6 +61,29 @@ export function Product() {
               ))}
             </div>
           </div>
+
+          {/* The demo engine cannot change a background, so it is not offered. */}
+          {settings.provider === 'gemini' && (
+            <div className="stack">
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-neutral-700)' }}>
+                {t('product.setting')}
+              </p>
+              <div className="hstack" style={{ flexWrap: 'wrap', gap: 8 }}>
+                {(Object.keys(OCCASIONS) as Occasion[]).map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    className="chip"
+                    aria-pressed={s.occasion === o}
+                    style={{ minHeight: 48 }}
+                    onClick={() => { haptic('select'); setOccasion(o); }}
+                  >
+                    {t(`occasion.${o}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="stack">
             <button type="button" className="btn btn--primary btn--block" onClick={() => { haptic('select'); void startTryOn(product.id); }}>

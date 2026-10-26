@@ -266,6 +266,10 @@ function SettingsPane() {
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="model">Image model</label>
               <input id="model" className="input" value={settings.geminiModel} onChange={(e) => void updateSettings({ geminiModel: e.target.value.trim() })} />
+              <p className="tiny muted" style={{ margin: '4px 0 0', paddingLeft: 6 }}>
+                gemini-nano-banana-2.1 is the best value. For bridal and heavy work, gemini-3-pro-image keeps
+                detail better at about four times the cost per try-on.
+              </p>
             </div>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="tmodel">Photo-reading model</label>

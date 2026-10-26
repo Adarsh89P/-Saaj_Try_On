@@ -106,6 +106,7 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
       thumbKey,
       name: draft.name.trim(),
       color: draft.color.trim() || 'Assorted',
+      details: draft.details?.trim() || undefined,
       price: Math.max(0, Math.round(draft.price)),
       stock: Math.max(0, Math.round(draft.stock)),
       sizes: parsedSizes,
@@ -209,6 +210,18 @@ export function ProductForm({ initial, onClose }: { initial?: Product; onClose: 
         <div className="field">
           <label htmlFor="pf-sizes">Sizes (comma separated)</label>
           <input id="pf-sizes" className="input" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" />
+        </div>
+
+        <div className="field">
+          <label htmlFor="pf-details">What makes it this piece</label>
+          <textarea
+            id="pf-details" className="textarea" maxLength={300}
+            value={draft.details ?? ''} onChange={(e) => setDraft({ ...draft, details: e.target.value })}
+            placeholder="Gold zari border, peacock motifs on the pallu, elbow-length sleeves"
+          />
+          <p className="tiny muted" style={{ margin: '4px 0 0', paddingLeft: 6 }}>
+            The try-on is told to reproduce these. Name the border, pallu, work and cut.
+          </p>
         </div>
 
         <button type="button" className="btn btn--primary btn--block" onClick={() => void submit()} disabled={busy}>

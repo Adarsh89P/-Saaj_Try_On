@@ -79,6 +79,11 @@ const en: Record<string, string> = {
   'product.tryOn': 'Try it on',
   'product.needPhoto': 'Take a photo to try it on',
   'product.addToSelection': 'Add to my selection',
+  'product.setting': 'See it at',
+  'occasion.photo': 'As I am',
+  'occasion.wedding': 'A wedding',
+  'occasion.festive': 'A festival',
+  'occasion.studio': 'A studio',
 
   'step.reading': 'Reading your photo',
   'step.shape': 'Matching your shape',
@@ -202,6 +207,11 @@ const hi: Record<string, string> = {
   'product.tryOn': 'ट्राई कीजिए',
   'product.needPhoto': 'ट्राई करने के लिए फोटो लीजिए',
   'product.addToSelection': 'मेरी पसंद में जोड़िए',
+  'product.setting': 'कहाँ देखें',
+  'occasion.photo': 'जैसी हूँ',
+  'occasion.wedding': 'शादी में',
+  'occasion.festive': 'त्योहार पर',
+  'occasion.studio': 'स्टूडियो में',
 
   'step.reading': 'आपकी फोटो पढ़ी जा रही है',
   'step.shape': 'आपका नाप मिलाया जा रहा है',

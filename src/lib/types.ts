@@ -14,6 +14,9 @@ export interface Product {
   /** Small copy of the same photo for grids and lists. Painting a 62px thumb
    *  from a 1400px original costs a full decode per tile. */
   thumbKey?: string;
+  /** What makes this piece recognisable — border, pallu, work, neckline. Fed to
+   *  the try-on so the model reproduces it instead of a generic garment. */
+  details?: string;
   createdAt: number;
 }
 
@@ -66,7 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'en',
   provider: 'demo',
   geminiKey: '',
-  geminiModel: 'gemini-2.5-flash-image',
+  geminiModel: 'gemini-nano-banana-2.1',
   geminiTextModel: 'gemini-2.5-flash',
   dailyRequestLimit: 200,
   cleanGarmentPhotos: true,
