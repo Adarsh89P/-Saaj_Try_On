@@ -7,6 +7,8 @@ const PRODUCTS = 'products';
 const ORDERS = 'orders';
 const SETTINGS = 'settings';
 const IMG = 'img:';
+/** The image model this app shipped with before Nano Banana 2.1. */
+const LEGACY_IMAGE_MODEL = 'gemini-2.5-flash-image';
 
 /* ── images ─────────────────────────────────────────────────────────── */
 
@@ -111,6 +113,9 @@ export async function setFlag(name: string) {
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await get<Partial<Settings>>(SETTINGS, store);
+  // Tablets set up before the newer image model kept the old default in their
+  // saved settings. Move them on; a model the shop typed in itself is left alone.
+  if (stored?.geminiModel === LEGACY_IMAGE_MODEL) delete stored.geminiModel;
   return { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
 }
 

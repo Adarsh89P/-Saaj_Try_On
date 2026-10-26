@@ -63,6 +63,30 @@ real fit and the UI says so on the result screen.
 sends the two photos straight to Google and gets the edited photo back. Each
 try-on is billed by Google.
 
+How the Gemini engine keeps the customer looking like herself and the piece
+looking like the stock:
+
+- **Labelled images.** The request introduces "IMAGE 1 — the customer" and
+  "IMAGE 2 — the garment" before each photo, so the model never mixes them up.
+- **Pinned framing.** The output is fixed to the aspect ratio nearest the
+  customer's photo. Left free, the model re-frames the shot, and re-framing is
+  where stretched bodies and changed faces come from.
+- **How it is worn.** Sarees, lehengas, kurtis, blouses and dresses each get
+  their own drape instructions (pleats, pallu over the left shoulder, lehenga
+  flare and so on).
+- **What makes it this piece.** Each catalogue item has a *details* line
+  (border, pallu, work, neckline) that the try-on must reproduce. Bulk add
+  fills it in from the photo; staff can edit it on the piece.
+- **Settings.** The customer can see the look as photographed, or at a
+  wedding, a festival or in a studio. Same single request, no extra cost.
+- **No double billing.** Trying the same piece again in the same session shows
+  the render already made. Busy (429/5xx) and dropped requests are retried
+  before the customer sees an error, and a refusal from Google says why.
+
+The default image model is `gemini-nano-banana-2.1`. It is the best value for
+this job. Switch to `gemini-3-pro-image` in Settings for bridal pieces with
+heavy work, at about four times the cost per try-on.
+
 > The key is stored on the tablet and readable by anyone who can open the Staff
 > area. Use a key restricted to this shop's billing, and rotate it if the tablet
 > is ever lost. With this engine the customer photo does leave the device — the

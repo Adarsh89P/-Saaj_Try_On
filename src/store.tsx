@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as db from './lib/db';
 import { clearImageCache } from './components/Img';
-import { runTryOn } from './lib/tryon';
+import { runTryOn, type Occasion } from './lib/tryon';
 import { ensureCatalogue, makeCode } from './lib/seed';
 import { makeThumb } from './lib/image';
 import { DEFAULT_SETTINGS, type Order, type Product, type SavedItem, type Settings } from './lib/types';
@@ -31,6 +31,8 @@ interface Session {
   query: string;
   productId?: string;
   size?: string;
+  /** The setting the next try-on is shown in. */
+  occasion: Occasion;
   saved: SavedItem[];
   progress: number;
   step: string;
@@ -46,7 +48,7 @@ interface Session {
 }
 
 const freshSession = (): Session => ({
-  screen: 'home', prev: 'home', cat: 'All', query: '', saved: [],
+  screen: 'home', prev: 'home', cat: 'All', query: '', occasion: 'photo', saved: [],
   progress: 0, step: '', compare: 'slide', resultSimulated: false,
   pendingTryOn: false, code: makeCode(), photoDeleted: false,
 });
@@ -66,6 +68,7 @@ interface Store {
   setQuery: (q: string) => void;
   setSize: (size: string) => void;
   setCompare: (c: 'before' | 'after' | 'slide') => void;
+  setOccasion: (o: Occasion) => void;
   openProduct: (id: string) => void;
   setDraftPhoto: (blob: Blob) => Promise<void>;
   confirmPhoto: () => void;
@@ -115,6 +118,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // A cancelled try-on must not write its result in late.
   const runId = useRef(0);
+  /** Results already made this session, by photo, piece, setting and engine.
+   *  Customers flick back to a piece they liked; showing the render they
+   *  already saw is instant and does not bill the shop a second time. */
+  const made = useRef(new Map<string, { key: string; simulated: boolean }>());
   const toastId = useRef(0);
 
   const notify = useCallback((msg: string, opts?: { tone?: 'ok' | 'warn'; undo?: () => void; undoLabel?: string }) => {
@@ -200,10 +207,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const doTryOn = useCallback(async (personKey: string, productId: string) => {
+  const doTryOn = useCallback(async (personKey: string, productId: string, occasion: Occasion) => {
     const p = products.find((x) => x.id === productId);
     if (!p) return;
     const id = ++runId.current;
+
+    const cacheKey = [personKey, productId, p.imageKey, occasion, settings.provider, settings.geminiModel].join('|');
+    const hit = made.current.get(cacheKey);
+    if (hit && await db.getImage(hit.key)) {
+      setS((prev) => ({
+        ...prev, screen: 'result', progress: 100, resultKey: hit.key,
+        resultSimulated: hit.simulated, compare: 'slide',
+        productId, size: prev.size ?? p.sizes[0], error: undefined,
+      }));
+      return;
+    }
 
     setS((prev) => ({ ...prev, screen: 'processing', prev: 'product', progress: 0, step: 'step.reading', compare: 'slide', error: undefined }));
 
@@ -211,12 +229,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const [person, garment] = await Promise.all([db.getImage(personKey), p.imageKey ? db.getImage(p.imageKey) : undefined]);
       if (!person) throw new Error('error.photoGone');
 
-      const result = await runTryOn({ person, garment, product: p }, settings, (percent, step) => {
+      const result = await runTryOn({ person, garment, product: p, occasion }, settings, (percent, step) => {
         if (runId.current === id) setS((prev) => ({ ...prev, progress: percent, step }));
       });
       if (runId.current !== id) return;
 
       const key = await db.saveImage(result.image, 'result');
+      made.current.set(cacheKey, { key, simulated: result.simulated });
       setS((prev) => ({
         ...prev, screen: 'result', progress: 100, resultKey: key,
         resultSimulated: result.simulated, compare: 'slide',
@@ -242,7 +261,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     const p = products.find((x) => x.id === id);
     setS((prev) => ({ ...prev, productId: id, size: prev.productId === id ? prev.size : p?.sizes[0] }));
-    await doTryOn(s.personKey, id);
+    await doTryOn(s.personKey, id, s.occasion);
   }, [s, products, doTryOn]);
 
   const cancelTryOn = useCallback(() => {
@@ -258,7 +277,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (prev.pendingTryOn && prev.productId) {
         next.pendingTryOn = false;
         // Kick the render off once state has settled.
-        queueMicrotask(() => void doTryOn(next.personKey!, next.productId!));
+        queueMicrotask(() => void doTryOn(next.personKey!, next.productId!, next.occasion));
         return next;
       }
       return { ...next, screen: 'collection', prev: 'home' };
@@ -328,6 +347,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    *  screen so the customer decides, rather than the tablet deciding for her. */
   const deletePhoto = useCallback(async () => {
     runId.current++;
+    made.current.clear();
     await wipeCustomerImages(products);
     setS((prev) => ({
       ...prev,
@@ -358,6 +378,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /** Wipes the customer's photo and try-ons, then hands the tablet to the next person. */
   const finish = useCallback(async () => {
     runId.current++;
+    made.current.clear();
     setS(freshSession());
     await wipeCustomerImages(products);
   }, [products]);
@@ -409,19 +430,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setQuery = useCallback((query: string) => patch({ query }), [patch]);
   const setSize = useCallback((size: string) => patch({ size }), [patch]);
   const setCompare = useCallback((compare: 'before' | 'after' | 'slide') => patch({ compare }), [patch]);
+  const setOccasion = useCallback((occasion: Occasion) => patch({ occasion }), [patch]);
 
   // Rebuilding this object on every render handed every consumer a new context
   // value each time, so a single keystroke in the search box re-rendered the
   // whole tree. Now only real state changes propagate.
   const value: Store = useMemo(() => ({
     ready, products, settings, orders, s, go, back, product, toast, notify, dismissToast,
-    setCat, setQuery, setSize, setCompare,
+    setCat, setQuery, setSize, setCompare, setOccasion,
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
     saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,
   }), [
     ready, products, settings, orders, s, go, back, product, toast, notify, dismissToast,
-    setCat, setQuery, setSize, setCompare,
+    setCat, setQuery, setSize, setCompare, setOccasion,
     openProduct, setDraftPhoto, confirmPhoto, discardDraft,
     startTryOn, cancelTryOn, saveCurrent, removeSaved, checkout, deletePhoto, resetSelection, finish,
     saveProduct, addProducts, deleteProduct, updateSettings, markCollected, clearOrders,

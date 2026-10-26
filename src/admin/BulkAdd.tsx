@@ -17,6 +17,7 @@ interface Row {
   sizes: string;
   price: number;
   stock: number;
+  details?: string;
   note?: string;
 }
 
@@ -70,6 +71,7 @@ export function BulkAdd({ onClose }: { onClose: () => void }) {
           cat: read.cat ?? 'Sarees',
           color: read.color ?? '',
           sizes: (read.sizes ?? ['Free size']).join(', '),
+          details: read.details,
           note: read.name ? undefined : 'Could not read this one — fill it in yourself.',
         });
       } catch (err) {
@@ -122,6 +124,7 @@ export function BulkAdd({ onClose }: { onClose: () => void }) {
         color: r.color.trim() || 'Assorted',
         sizes: parsed.length ? parsed : ['Free size'],
         stock: Math.max(0, Math.round(r.stock)),
+        details: r.details?.trim() || undefined,
         imageKey: r.imageKey,
         thumbKey,
         createdAt: Date.now(),
