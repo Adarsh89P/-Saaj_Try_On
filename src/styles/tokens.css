@@ -1,56 +1,63 @@
-/* Tokens carried from the Organic design system (_ds/organic-…/styles.css). */
+/* Saaj design tokens: festive boutique palette. */
 :root {
-  --color-bg: #f5ead8;
-  --color-surface: #ebddc5;
-  --color-text: #201e1d;
-  --color-accent: #c67139;
-  --color-accent-2: #7a8a5e;
-  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+  /* Festive boutique palette: wine and rani pink for the shop's voice, temple
+     gold for the trim, warm ivory paper underneath. Chosen to sit beside the
+     sarees and lehengas on screen rather than compete with them. */
+  --color-bg: #fbf5ee;
+  --color-surface: #f5eae0;
+  --color-card: #fffcf8;
+  --color-text: #2b1320;
+  --color-accent: #b0285f;
+  --color-accent-2: #cf9a2e;
+  --color-divider: color-mix(in srgb, #2b1320 13%, transparent);
 
-  --color-neutral-100: #f9f4ed;
-  --color-neutral-200: #eee7db;
-  --color-neutral-300: #dcd3c4;
-  --color-neutral-400: #c0b6a5;
-  --color-neutral-500: #a19786;
-  --color-neutral-600: #82796a;
-  --color-neutral-700: #645c50;
-  --color-neutral-800: #474238;
-  --color-neutral-900: #2e2b25;
+  --color-neutral-100: #fffcf8;
+  --color-neutral-200: #f6ede5;
+  --color-neutral-300: #ebdfd5;
+  --color-neutral-400: #d2c1b6;
+  --color-neutral-500: #ad9a90;
+  --color-neutral-600: #8a766d;
+  --color-neutral-700: #6b5550;
+  --color-neutral-800: #4a3836;
+  --color-neutral-900: #2b1320;
 
-  --color-accent-100: #fff2eb;
-  --color-accent-200: #ffe1d0;
-  --color-accent-300: #ffc6a5;
-  --color-accent-400: #f6a06b;
-  --color-accent-500: #d67f48;
-  --color-accent-600: #b2622d;
-  --color-accent-700: #8c491a;
-  --color-accent-800: #643312;
-  --color-accent-900: #402310;
+  --color-accent-100: #fceef2;
+  --color-accent-200: #f8d7e2;
+  --color-accent-300: #f0afc5;
+  --color-accent-400: #e27a9e;
+  --color-accent-500: #c9457a;
+  --color-accent-600: #b0285f;
+  --color-accent-700: #8c1c48;
+  --color-accent-800: #6e1236;
+  --color-accent-900: #470a21;
 
-  --color-accent-2-100: #f0fae1;
-  --color-accent-2-200: #e1eecc;
-  --color-accent-2-300: #ccdbb2;
-  --color-accent-2-400: #aebf92;
-  --color-accent-2-500: #8fa073;
-  --color-accent-2-600: #728157;
-  --color-accent-2-700: #56633f;
-  --color-accent-2-800: #3d472b;
-  --color-accent-2-900: #272e1b;
+  --color-accent-2-100: #fff6e1;
+  --color-accent-2-200: #fbe8b8;
+  --color-accent-2-300: #f3d07a;
+  --color-accent-2-400: #e6b44a;
+  --color-accent-2-500: #cf9a2e;
+  --color-accent-2-600: #a97a1f;
+  --color-accent-2-700: #84601a;
+  --color-accent-2-800: #5c4210;
+  --color-accent-2-900: #3d2c0c;
+
+  /* Decorative only — never under text. */
+  --gold-sheen: linear-gradient(135deg, #f6dc94 0%, #cf9a2e 45%, #f3d07a 70%, #a97a1f 100%);
+  --wine-sheen: linear-gradient(135deg, #b0285f 0%, #8c1c48 52%, #5e0f2e 100%);
 
   /* ── Accent roles ────────────────────────────────────────────────────────
-     The scale above is the palette; these are the jobs. The distinction that
-     matters: --color-accent (#c67139) and -500 are surface colours and carry
-     no text — a cream label on either measures 2.9:1, which is under AA and
-     visibly soft on a tablet held under a shop's window light. Anything with
-     words on it uses --accent-solid (4.9:1) or --accent-2-solid (5.0:1).
-     Same hue family, same warmth, one step down in lightness. */
-  --accent-solid: #a85a28;
-  --accent-solid-pressed: #8c491a;
-  --accent-2-solid: #63744a;
-  --on-accent: #fffaf4;
+     The scale above is the palette; these are the jobs. Anything with words on
+     it uses --accent-solid (cream text 8.4:1) or --accent-2-solid (6.0:1);
+     the lighter steps and the sheens are surfaces only. */
+  --accent-solid: #8c1c48;
+  --accent-solid-pressed: #6e1236;
+  --accent-2-solid: #7b5a12;
+  --on-accent: #fff8f2;
 
-  --font-heading: "Caprasimo", system-ui, sans-serif;
-  --font-body: "Figtree", system-ui, sans-serif;
+  /* An editorial serif for the shop's voice; Devanagari faces after each so the
+     Hindi screens get real glyphs instead of the system fallback. */
+  --font-heading: "Playfair Display", "Noto Serif Devanagari", Georgia, serif;
+  --font-body: "Figtree", "Noto Sans Devanagari", system-ui, sans-serif;
 
   /* ── Type scale ──────────────────────────────────────────────────────────
      Fluid between the 360px phone a staff member tests on and the 834px shop
@@ -65,10 +72,8 @@
   --text-2xl:   clamp(1.62rem, 1.36rem + 1.15vw, 2.35rem);
   --text-3xl:   clamp(2.05rem, 1.60rem + 2.00vw, 3.05rem);
 
-  /* Caprasimo is a heavy display face; at large sizes it needs the letters
-     pulled in and the lines closed up or it reads as a poster, not a heading. */
-  --tracking-display: -0.018em;
-  --leading-display: 1.06;
+  --tracking-display: -0.012em;
+  --leading-display: 1.08;
   /* Long-form Hindi sits taller than Latin and needs the extra line. */
   --leading-body: 1.55;
   --measure: 62ch;
@@ -82,12 +87,12 @@
   /* Wide and faint rather than tight and dark, and tinted with the warm
      charcoal of the background rather than neutral black, so an elevated
      surface reads as lifted off this paper instead of pasted onto it. */
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent);
-  --shadow-md: 0 6px 18px -6px color-mix(in srgb, #2e2b25 26%, transparent);
-  --shadow-lg: 0 20px 48px -18px color-mix(in srgb, #2e2b25 40%, transparent);
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #47102a 10%, transparent);
+  --shadow-md: 0 10px 28px -12px color-mix(in srgb, #47102a 30%, transparent);
+  --shadow-lg: 0 24px 56px -20px color-mix(in srgb, #47102a 42%, transparent);
   /* A hairline of light along the top edge; what makes a raised panel look
      like it has a physical edge rather than a drop shadow underneath it. */
-  --edge-light: inset 0 1px 0 color-mix(in srgb, #fffaf4 40%, transparent);
+  --edge-light: inset 0 1px 0 color-mix(in srgb, #fff8f2 35%, transparent);
 
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-spring: cubic-bezier(.34, 1.56, .64, 1);

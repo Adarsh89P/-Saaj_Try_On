@@ -47,3 +47,13 @@ export function HangerIcon({ size = 92, className = 'icon' }: Props) {
     </svg>
   );
 }
+
+/** The invitation to start: a camera, because the first step is a photo. */
+export function CameraIcon({ size = 22, className = 'icon' }: Props) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  );
+}

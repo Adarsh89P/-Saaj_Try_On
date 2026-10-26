@@ -4,6 +4,7 @@ import { money } from '../lib/image';
 import { useT } from '../lib/i18n';
 import { CATEGORIES } from '../lib/types';
 import { haptic } from '../lib/haptics';
+import { CameraIcon } from '../components/Icon';
 
 export function Home() {
   const { s, settings, products, go, openProduct, setCat } = useStore();
@@ -20,29 +21,35 @@ export function Home() {
       <h1 className="h-xl">{t('home.title')}</h1>
 
       {s.personKey ? (
-        <div className="row" style={{ background: 'var(--color-accent-2-200)', borderRadius: 'var(--radius-xl)', padding: '16px 18px' }}>
+        <div className="row" style={{ background: 'var(--color-card)', borderRadius: 'var(--radius-xl)', padding: '14px 16px', boxShadow: 'var(--shadow-md), 0 0 0 1.5px var(--color-accent-2-300)' }}>
           <div className="row__thumb" style={{ width: 52, height: 64, borderRadius: 14 }}>
             <Img imageKey={s.personKey} alt={t('photo.yourPhoto')} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600 }}>{t('home.photoReady')}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-accent-2-800)' }}>{t('home.photoReadyHint')}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-neutral-700)' }}>{t('home.photoReadyHint')}</p>
           </div>
           <button type="button" className="btn btn--ghost" onClick={() => go('photo')}>{t('home.retake')}</button>
         </div>
       ) : (
         <div className="panel panel--invite">
-          <p style={{ margin: 0, fontSize: 'var(--text-base)', lineHeight: 1.45, maxWidth: '34ch' }}>
-            {t('home.intro')}
-          </p>
-          <button
-            type="button"
-            className="btn"
-            style={{ background: 'var(--on-accent)', color: 'var(--color-accent-800)', boxShadow: 'var(--shadow-sm)', alignSelf: 'flex-start' }}
-            onClick={() => { haptic('select'); go('photo'); }}
-          >
-            {t('home.takePhoto')}
-          </button>
+          <div className="stack" style={{ gap: 18 }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-lg)', lineHeight: 1.45, maxWidth: '30ch', color: '#fff3e2' }}>
+              {t('home.intro')}
+            </p>
+            <button type="button" className="panel__cta" onClick={() => { haptic('select'); go('photo'); }}>
+              <CameraIcon size={22} />
+              {t('home.takePhoto')}
+            </button>
+          </div>
+          {/* A glimpse of the stock, so the invitation shows what it is for. */}
+          {featured.length >= 3 && (
+            <div className="fan" aria-hidden="true">
+              {featured.slice(0, 3).map((p) => (
+                <div key={p.id}><Media imageKey={p.thumbKey ?? p.imageKey} label="" className="media" /></div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
